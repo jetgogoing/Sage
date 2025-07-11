@@ -1,0 +1,13 @@
+# Sage MCP 轻量化记忆系统依赖
+
+# 数据库
+psycopg2-binary==2.9.10
+
+# HTTP 请求
+requests==2.32.4
+
+# 数值计算
+numpy==2.2.6
+
+# 环境变量管理
+python-dotenv==1.0.1
