@@ -35,3 +35,6 @@ Thumbs.db
 
 # Claude
 .claude/
+
+# 文档和报告
+docs/

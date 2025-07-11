@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""测试数据库连接的脚本"""
+"""
+数据库连接测试脚本
+
+测试内容：
+- PostgreSQL 数据库连接性
+- pgvector 扩展安装状态
+- conversations 表存在性
+
+用于验证数据库环境是否正确配置
+"""
 
 import psycopg2
 from psycopg2.extras import RealDictCursor

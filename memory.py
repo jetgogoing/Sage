@@ -1,7 +1,19 @@
 #!/usr/bin/env python3
 """
 Sage MCP 轻量化记忆系统 - 核心记忆功能模块
-负责向量化、存储和检索对话历史
+
+主要功能：
+1. 文本向量化：使用 Qwen3-Embedding-8B 生成 4096 维向量
+2. 相似度搜索：基于 pgvector 的余弦相似度检索
+3. 上下文生成：使用 DeepSeek-V2.5 生成相关历史摘要
+4. 对话存储：自动保存用户查询和 Claude 响应
+
+数据库结构：
+- conversations 表存储所有对话历史
+- 每条记录包含：session_id, turn_id, role, content, embedding
+- 支持基于向量相似度的快速检索
+
+作者：Sage MCP 项目组
 """
 
 import os

@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
 """
 Sage MCP 轻量化记忆系统 - Claude CLI 注入器
-通过 Monkey-Patching 为 Claude CLI 添加记忆功能
+
+功能说明：
+- 作为 Claude CLI 的包装器，拦截用户输入并注入历史上下文
+- 使用 subprocess 调用原始 claude 命令，保持完全兼容性
+- 自动保存每次对话到数据库供未来检索
+
+使用方法：
+1. 设置 alias: alias claude='python /path/to/claude_mem.py'
+2. 正常使用: claude "你的查询"
+
+作者：Sage MCP 项目组
 """
 
 import sys
