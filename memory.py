@@ -18,12 +18,12 @@ Sage MCP 轻量化记忆系统 - 核心记忆功能模块
 
 import os
 import json
-import psycopg2
-from psycopg2.extras import RealDictCursor
+# import psycopg2  # 移到函数内部延迟导入
+# from psycopg2.extras import RealDictCursor  # 移到函数内部延迟导入
 import requests
 from datetime import datetime
 import numpy as np
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import uuid
 from dotenv import load_dotenv
 
@@ -40,7 +40,9 @@ DB_CONFIG = {
 }
 
 # SiliconFlow API 配置
-SILICONFLOW_API_KEY = os.getenv('SILICONFLOW_API_KEY', 'sk-xtjxdvdwjfiiggwxkojmiryhcfjliywfzurbtsorwvgkimdg')
+SILICONFLOW_API_KEY = os.getenv('SILICONFLOW_API_KEY')
+if not SILICONFLOW_API_KEY:
+    raise ValueError("SILICONFLOW_API_KEY 环境变量未设置。请在 .env 文件中设置您的 API 密钥。")
 SILICONFLOW_BASE_URL = "https://api.siliconflow.cn/v1"
 
 # 模型配置
@@ -53,6 +55,7 @@ TURN_COUNTER = 0
 
 def get_db_connection():
     """获取数据库连接"""
+    import psycopg2
     return psycopg2.connect(**DB_CONFIG)
 
 def embed_text(text: str) -> List[float]:
@@ -99,6 +102,7 @@ def search_similar_conversations(query_embedding: List[float], limit: int = 5) -
     从数据库中搜索相似的历史对话
     使用余弦相似度排序
     """
+    from psycopg2.extras import RealDictCursor
     conn = get_db_connection()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -260,3 +264,144 @@ def save_memory(user_query: str, claude_response: str):
         
     finally:
         conn.close()
+
+def save_conversation_turn(user_prompt: str, assistant_response: str, metadata: Optional[Dict] = None):
+    """
+    保存完整的对话轮次（新函数，兼容旧接口）
+    
+    Args:
+        user_prompt: 用户输入
+        assistant_response: Claude 的响应  
+        metadata: 额外元数据（时间戳、模型等）
+    """
+    # 直接调用原有函数
+    save_memory(user_prompt, assistant_response)
+
+def get_memory_stats() -> Dict[str, Any]:
+    """获取记忆系统统计信息"""
+    conn = get_db_connection()
+    from psycopg2.extras import RealDictCursor
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # 总记忆数
+            cur.execute("SELECT COUNT(*) as total FROM conversations")
+            total = cur.fetchone()['total']
+            
+            # 今日新增
+            cur.execute("""
+                SELECT COUNT(*) as today 
+                FROM conversations 
+                WHERE created_at >= CURRENT_DATE
+            """)
+            today = cur.fetchone()['today']
+            
+            # 本周活跃
+            cur.execute("""
+                SELECT COUNT(*) as this_week 
+                FROM conversations 
+                WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
+            """)
+            this_week = cur.fetchone()['this_week']
+            
+            # 存储大小（估算）
+            cur.execute("""
+                SELECT 
+                    pg_size_pretty(pg_total_relation_size('conversations')) as size,
+                    pg_total_relation_size('conversations') as size_bytes
+            """)
+            size_info = cur.fetchone()
+            
+            return {
+                'total': total,
+                'today': today,
+                'this_week': this_week,
+                'size': size_info['size'],
+                'size_mb': size_info['size_bytes'] / (1024 * 1024)
+            }
+            
+    finally:
+        conn.close()
+
+def clear_all_memories() -> int:
+    """清除所有记忆"""
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM conversations")
+            count = cur.fetchone()[0]
+            
+            cur.execute("TRUNCATE TABLE conversations")
+            conn.commit()
+            
+            return count
+            
+    finally:
+        conn.close()
+
+def add_memory(content: str, metadata: Optional[Dict] = None):
+    """添加单条记忆（用于导入等场景）"""
+    global TURN_COUNTER
+    
+    conn = get_db_connection()
+    try:
+        TURN_COUNTER += 1
+        
+        # 向量化内容
+        embedding = embed_text(content)
+        
+        # 默认元数据
+        default_metadata = {
+            'role': 'user',
+            'session_id': SESSION_ID,
+            'turn_id': TURN_COUNTER
+        }
+        
+        if metadata:
+            default_metadata.update(metadata)
+        
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO conversations (
+                    session_id, turn_id, role, content, embedding
+                ) VALUES (%s, %s, %s, %s, %s)
+            """, (
+                default_metadata.get('session_id', SESSION_ID),
+                default_metadata.get('turn_id', TURN_COUNTER),
+                default_metadata.get('role', 'user'),
+                content,
+                embedding
+            ))
+            
+            conn.commit()
+            
+    finally:
+        conn.close()
+
+def search_memory(query: str, n: int = 5) -> List[Dict[str, Any]]:
+    """搜索记忆（供命令行工具使用）"""
+    try:
+        # 向量化查询
+        query_embedding = embed_text(query)
+        
+        # 搜索相似对话
+        results = search_similar_conversations(query_embedding, limit=n)
+        
+        # 格式化结果
+        formatted_results = []
+        for r in results:
+            formatted_results.append({
+                'content': r['content'],
+                'role': r['role'],
+                'score': r.get('similarity', 0),
+                'metadata': {
+                    'session_id': r['session_id'],
+                    'turn_id': r['turn_id'],
+                    'timestamp': r['created_at'].isoformat() if r['created_at'] else None
+                }
+            })
+        
+        return formatted_results
+        
+    except Exception as e:
+        print(f"搜索失败: {e}")
+        return []

@@ -1,40 +1,111 @@
+# 文档目录（按用户要求）
+docs/
+
+# 根目录文件（除README.md外全部忽略）
+/*.py
+/*.sh
+/*.bat
+/*.ps1
+/*.json
+/*.txt
+/*.md
+!README.md
+/*.yaml
+/*.yml
+/*.toml
+/*.ini
+/*.cfg
+/*.conf
+
+# 数据库和聊天记录（敏感数据）
+pgdata/
+*.db
+*.sqlite
+*.sqlite3
+conversation_*.json
+chat_*.json
+memory_*.json
+
+# 环境配置文件
+.env
+.env.local
+.env.example
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 虚拟环境
+.venv/
 venv/
-.venv
+ENV/
+env/
 
-# 环境配置
-.env
-.env.local
-
-# 数据库
-pgdata/
-
-# IDE
+# IDE配置
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# 系统文件
-.DS_Store
-Thumbs.db
-
-# 日志
+# 日志文件
 *.log
+logs/
 
 # 临时文件
 *.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# 测试覆盖率
+.coverage
+htmlcov/
+.tox/
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# 备份文件
+*.backup
 *.bak
-*~
 
-# Claude
-.claude/
+# 敏感测试文件和API测试
+test_*_direct.py
+test_siliconflow_api.py
+test_*_api.py
 
-# 文档和报告
-docs/
+# Sage MCP 特定忽略
+claude-wrapper.sh
+install-*.sh
+*.py.backup
+recursion_lock_poc.py
+trace_imports.py
+fix_*.py
+debug_*.py
+test_*.py
+migrate.py

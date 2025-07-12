@@ -7,7 +7,14 @@ psycopg2-binary==2.9.10
 requests==2.32.4
 
 # 数值计算
-numpy==2.2.6
+numpy==1.26.4
 
 # 环境变量管理
 python-dotenv==1.0.1
+
+# 资源监控
+psutil==5.9.8
+
+# CLI美化和用户体验
+rich==13.7.0
+humanize==4.9.0
