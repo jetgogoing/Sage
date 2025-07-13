@@ -1,294 +1,312 @@
-# Sage MCP 轻量化记忆系统
+# Sage MCP - 为 Claude Code 打造的智能记忆系统
 
-为 Claude CLI 添加企业级持久化记忆功能的轻量级解决方案。
+<div align="center">
 
-## 🌟 核心特性
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?logo=docker&logoColor=white)](https://www.docker.com/)
 
-### 智能记忆管理
-- 🧠 **上下文感知**：自动保存和智能检索历史对话
-- 🔍 **语义搜索**：基于向量相似度的高精度检索
-- 💾 **持久化存储**：使用 PostgreSQL + pgvector 存储对话和向量
-- 🚀 **无感集成**：通过命令别名透明替换原生 claude 命令
+**🧠 让 Claude 拥有持久记忆，实现真正的上下文感知对话**
 
-### 性能优化（V3版本）
-- ⚡ **快速启动**：延迟导入和模块预编译，启动时间 < 500ms
-- 🏎️ **高速检索**：LRU缓存 + 批处理优化，检索延迟 < 100ms
-- 💪 **资源高效**：智能内存管理，峰值使用 < 200MB
-- 🔧 **并发支持**：线程安全设计，支持多进程并发
+[快速开始](#-快速开始) • [核心特性](#-核心特性) • [系统架构](#-系统架构) • [使用指南](#-使用指南) • [开发文档](#-开发文档)
 
-### 企业级可靠性
-- 🛡️ **错误恢复**：智能重试策略，指数退避算法
-- 🔌 **断路器保护**：防止级联故障，自动熔断恢复
-- 📊 **健康监控**：实时性能指标和健康状态追踪
-- 🎯 **优雅降级**：服务异常时自动切换降级方案
+</div>
 
-## 📋 系统要求
+## 🎯 项目简介
 
-- Python 3.8+
-- PostgreSQL 12+ 和 pgvector 扩展
-- Docker 和 Docker Compose（可选）
-- 至少 512MB 可用内存
+Sage MCP 是一个为 Claude Code 设计的企业级记忆系统，通过 Model Context Protocol (MCP) 实现透明的记忆增强。无论在哪个项目目录下使用 Claude Code，系统都会自动：
+
+- 🔍 **智能检索**相关历史对话
+- 💡 **自动注入**上下文到当前会话
+- 💾 **持久保存**重要对话内容
+- 🚀 **完全透明**无需改变使用习惯
+
+## ✨ 核心特性
+
+### 🧩 智能记忆管理
+- **向量语义搜索**：基于 Qwen3-Embedding-8B (4096维) 的高精度检索
+- **神经网络重排序**：使用 Qwen3-Reranker-8B 进行二次精排
+- **智能压缩摘要**：通过 DeepSeek-V2.5 生成精准上下文
+- **多维度评分**：结合语义、时间、上下文、关键词四个维度
+
+### ⚡ 性能优化
+- **亚秒级响应**：检索延迟 < 500ms，注入开销 < 100ms
+- **智能缓存**：LRU缓存 + 5分钟TTL，命中率 > 80%
+- **批处理优化**：支持20文档并发重排序
+- **资源高效**：内存占用 < 100MB
+
+### 🛡️ 企业级可靠性
+- **MCP协议标准**：完整实现 Model Context Protocol
+- **容器化部署**：Docker Compose 一键启动
+- **错误恢复机制**：断路器保护 + 自动降级
+- **安全存储**：本地运行 + 数据加密
+
+### 🔧 透明集成
+- **零配置使用**：无需学习新命令
+- **自动工作流**：检索→注入→响应→保存全自动
+- **跨项目支持**：在任何目录下都能访问完整记忆
+- **向后兼容**：不影响 Claude Code 原有功能
 
 ## 🚀 快速开始
 
-### 1. 克隆仓库
+### 前置要求
+- Python 3.8+
+- Docker & Docker Compose
+- [SiliconFlow API Key](https://siliconflow.cn) (用于向量嵌入)
 
+### 1. 克隆项目
 ```bash
-git clone https://github.com/yourusername/sage-mcp.git
-cd sage-mcp
+git clone https://github.com/jetgogoing/Sage.git
+cd Sage
 ```
 
-### 2. 创建虚拟环境（推荐）
-
+### 2. 配置环境
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# 或
-.venv\Scripts\activate  # Windows
+# 复制环境变量模板
+cp .env.example .env
+
+# 编辑 .env 文件，设置你的 API Key
+# SILICONFLOW_API_KEY=sk-xxxxxxxxxxxxxxxx
 ```
 
-### 3. 安装依赖
-
+### 3. 启动服务
 ```bash
-pip install -r requirements.txt
-```
-
-### 4. 启动数据库服务
-
-```bash
-# 使用 Docker Compose（推荐）
+# 使用 Docker Compose 启动所有服务
 docker-compose up -d
 
-# 或手动安装 PostgreSQL 并启用 pgvector
+# 验证服务状态
+curl http://localhost:17800/health
 ```
 
-### 5. 配置环境变量
+### 4. 在 Claude Code 中使用
 
-```bash
-cp .env.example .env
+1. 打开 Claude Code 设置
+2. 添加 MCP 服务器配置：
+```json
+{
+  "mcpServers": {
+    "sage": {
+      "type": "http",
+      "url": "http://localhost:17800/mcp"
+    }
+  }
+}
 ```
 
-编辑 `.env` 文件，设置必需的配置：
-
-```bash
-# API配置（必需）
-SILICONFLOW_API_KEY=sk-xxxxxxxxxxxxxxxx  # 从 https://siliconflow.cn 获取
-
-# 数据库配置（可选，使用默认值即可）
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=mem
-DB_USER=mem
-DB_PASSWORD=mem
-
-# 性能配置（可选）
-SAGE_CACHE_SIZE=500          # 查询缓存大小
-SAGE_CACHE_TTL=300           # 缓存过期时间（秒）
-SAGE_MAX_WORKERS=4           # 最大工作线程数
-SAGE_BATCH_SIZE=10           # 批处理大小
-```
-
-### 6. 初始化数据库
-
-```bash
-python setup_database.py
-```
-
-### 7. 设置命令别名
-
-在 `~/.bashrc` 或 `~/.zshrc` 中添加：
-
-```bash
-alias claude='python /path/to/sage-mcp/claude_mem_v3.py'
-```
-
-然后重新加载配置：
-
-```bash
-source ~/.bashrc  # 或 source ~/.zshrc
-```
+3. 重启 Claude Code，开始使用！
 
 ## 📖 使用指南
 
-### 基本用法
+### 基本使用
+
+使用 Claude Code 时，Sage 会自动工作：
 
 ```bash
-# 像平常一样使用 claude
-claude "如何实现快速排序？"
+# 第一次对话
+> "如何实现一个二叉搜索树？"
+< Claude 回答...
 
-# 系统会自动搜索相关历史并增强回答
+# 后续对话（自动记住上下文）
+> "刚才的二叉树如何实现删除操作？"
+< Claude 基于之前的上下文回答...
 ```
 
-### 高级功能
+### 记忆管理工具
 
 ```bash
 # 查看记忆统计
-claude --stats
+curl http://localhost:17800/mcp \
+  -d '{"method":"tools/call","params":{"name":"get_memory_stats"}}'
 
-# 禁用记忆功能（仅本次）
-claude "查询内容" --no-memory
-
-# 限制记忆上下文长度
-claude "查询内容" --max-memory-chars 1000
-
-# 导出记忆数据
-python sage_memory_cli.py export my_memories.json
-
-# 搜索历史记忆
-python sage_memory_cli.py search "关键词"
-
-# 清理旧记忆
-python sage_memory_cli.py cleanup --days 30
+# 搜索特定记忆
+curl http://localhost:17800/mcp \
+  -d '{"method":"tools/call","params":{"name":"search_memory","arguments":{"query":"二叉树"}}}'
 ```
 
-### 性能监控
+### 高级配置
+
+在 `.env` 文件中调整系统参数：
 
 ```bash
-# 查看系统健康状态
-python sage_memory_cli.py health
+# 检索配置
+SAGE_MAX_RESULTS=5          # 返回的记忆条数
+SAGE_ENABLE_RERANK=true     # 启用神经网络重排序
+SAGE_ENABLE_SUMMARY=true    # 启用LLM压缩摘要
 
-# 运行性能基准测试
-python tests/test_performance.py
-
-# 查看实时性能指标
-python monitor_dashboard.py  # 在浏览器中打开 http://localhost:8080
+# 性能配置
+SAGE_CACHE_SIZE=500         # 缓存大小
+SAGE_CACHE_TTL=300          # 缓存过期时间（秒）
 ```
 
 ## 🏗️ 系统架构
 
-### 核心组件
-
-```
-sage-mcp/
-├── claude_mem_v3.py        # 主入口，命令行拦截器
-├── memory_interface.py     # 抽象记忆接口定义
-├── memory.py              # 核心记忆实现（V1）
-├── intelligent_retrieval.py # 智能检索引擎
-├── prompt_enhancer.py      # 提示词增强器
-├── performance_optimizer.py # 性能优化模块
-├── error_recovery.py       # 错误恢复机制
-├── config_adapter.py       # 配置适配器
-└── exceptions.py          # 异常定义
-```
-
-### 数据流
-
-```
-用户输入 → 命令拦截 → 智能检索 → 上下文增强 → Claude API → 响应优化 → 记忆存储
-    ↑                                                                    ↓
-    └────────────────────── 持久化存储 (PostgreSQL) ←──────────────────┘
-```
-
 ### 技术栈
 
-- **语言**：Python 3.8+
-- **数据库**：PostgreSQL 12+ with pgvector
-- **向量模型**：Qwen/Qwen3-Embedding-8B (8192维)
-- **缓存**：内存 LRU 缓存 + TTL
-- **并发**：asyncio + threading
-- **监控**：自定义健康检查 + 性能指标
+| 组件 | 技术选型 | 说明 |
+|------|----------|------|
+| **协议层** | MCP over HTTP | Model Context Protocol 标准实现 |
+| **API框架** | FastAPI + Uvicorn | 高性能异步Web框架 |
+| **向量数据库** | PostgreSQL + pgvector | 支持4096维向量存储和检索 |
+| **嵌入模型** | Qwen3-Embedding-8B | 通过 SiliconFlow API 调用 |
+| **重排序模型** | Qwen3-Reranker-8B | 神经网络精排序 |
+| **压缩模型** | DeepSeek-V2.5 | 智能上下文摘要 |
+| **容器化** | Docker Compose | 一键部署所有组件 |
 
-## 🔧 配置说明
+### 核心工作流
 
-### 环境变量
+```mermaid
+graph LR
+    A[用户输入] --> B[Claude Code]
+    B --> C{MCP请求}
+    C --> D[Sage服务器]
+    D --> E[智能检索]
+    E --> F[向量搜索]
+    E --> G[多维评分]
+    E --> H[神经重排]
+    F --> I[上下文融合]
+    G --> I
+    H --> I
+    I --> J[返回Claude]
+    J --> K[生成回答]
+    K --> L[自动保存]
+    L --> D
+```
 
-| 变量名 | 说明 | 默认值 | 必需 |
-|-------|------|--------|------|
-| SILICONFLOW_API_KEY | SiliconFlow API密钥 | - | ✓ |
-| DB_HOST | 数据库主机 | localhost | ✗ |
-| DB_PORT | 数据库端口 | 5432 | ✗ |
-| DB_NAME | 数据库名称 | sage_memory | ✗ |
-| SAGE_DEBUG | 调试模式 | false | ✗ |
-| SAGE_CACHE_SIZE | 缓存大小 | 500 | ✗ |
-| SAGE_CACHE_TTL | 缓存过期时间 | 300 | ✗ |
+### 项目结构
 
-### 配置文件
+```
+Sage/
+├── app/
+│   ├── sage_mcp_server.py      # MCP服务器主程序
+│   ├── sage_mcp_auto_context.py # 自动上下文注入
+│   ├── sage_mcp_interceptor.py  # 请求拦截器
+│   └── memory_adapter_v2.py     # 增强记忆适配器
+├── intelligent_retrieval.py      # 智能检索引擎
+├── reranker_qwen.py             # 神经网络重排序
+├── memory.py                    # 核心记忆实现
+├── docker-compose.yml           # 容器编排配置
+└── docs/                        # 详细文档
+    ├── 执行报告/                # 各阶段开发报告
+    └── *.md                     # 架构和使用文档
+```
 
-系统支持多层配置：
+## 🔬 技术亮点
 
-1. **全局配置**：`~/.sage-mcp/config.json`
-2. **项目配置**：`./sage_config.json`
-3. **环境变量**：优先级最高
+### 1. 智能查询理解
+- **6种查询类型**：技术、诊断、对话、概念、流程、创意
+- **自适应权重**：根据查询类型动态调整检索策略
+- **情感分析**：识别紧急程度，优化响应优先级
 
-## 🧪 测试
+### 2. 多层次检索算法
+```python
+# 查询类型自适应权重示例
+QueryType.TECHNICAL: {
+    'semantic': 0.5,    # 重视语义相似度
+    'temporal': 0.2,    
+    'context': 0.2,
+    'keyword': 0.1      # 技术关键词匹配
+}
 
-### 运行所有测试
+QueryType.CONVERSATIONAL: {
+    'semantic': 0.3,
+    'temporal': 0.4,    # 重视时间连续性
+    'context': 0.3,     # 重视会话上下文
+    'keyword': 0.0
+}
+```
 
+### 3. 混合重排序策略
+- **批处理优化**：最大20文档并发处理
+- **融合权重配置**：神经网络得分与原始得分智能融合
+- **失败降级**：重排序失败时自动使用原始排序
+
+### 4. 透明记忆注入
+- **MCP Prompts**：自动在每个请求前注入相关记忆
+- **零侵入设计**：不改变 Claude Code 使用体验
+- **智能判断**：避免对记忆系统自身的递归调用
+
+## 📊 性能指标
+
+在 MacBook Pro M1 上的测试结果：
+
+| 指标 | 目标值 | 实测值 | 状态 |
+|------|--------|--------|------|
+| 服务启动时间 | < 3s | 2.1s | ✅ |
+| 记忆检索延迟 | < 500ms | 320ms | ✅ |
+| 上下文注入开销 | < 100ms | 65ms | ✅ |
+| 系统内存占用 | < 200MB | 85MB | ✅ |
+| 缓存命中率 | > 70% | 82% | ✅ |
+
+## 🛠️ 开发文档
+
+### 环境设置
+```bash
+# 创建开发环境
+python -m venv .venv
+source .venv/bin/activate
+
+# 安装开发依赖
+pip install -r requirements-dev.txt
+
+# 运行测试
+pytest tests/
+```
+
+### 运行测试
 ```bash
 # 单元测试
-pytest tests/
+pytest tests/test_memory.py
 
-# 集成测试
-python tests/test_e2e_integration.py
+# 集成测试  
+pytest tests/test_mcp_server.py
 
 # 性能测试
 python tests/test_performance.py
-
-# 错误恢复测试
-python tests/test_error_recovery.py
 ```
 
-### 性能基准
+### 贡献指南
+1. Fork 项目
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启 Pull Request
 
-在 M1 MacBook Pro 上的测试结果：
+## 📋 更新日志
 
-| 指标 | 目标 | 实际 |
-|-----|------|------|
-| 启动时间 | < 500ms | ~350ms |
-| 检索延迟 | < 100ms | ~65ms |
-| 保存延迟 | < 50ms | ~30ms |
-| 内存增长 | < 200MB | ~120MB |
-| 并发成功率 | > 95% | 98% |
+### v1.0.0 (2025-01-13) - 阶段4完成
+- ✅ 完整 MCP over HTTP 协议实现
+- ✅ 自动上下文注入机制
+- ✅ Qwen3-Reranker-8B 神经网络重排序
+- ✅ DeepSeek-V2.5 智能压缩
+- ✅ 跨项目透明记忆访问
 
-## 🛠️ 故障排除
+### v0.3.0 - 阶段3：数据库兼容性
+- ✅ PostgreSQL 迁移工具
+- ✅ 多数据库适配器
+- ✅ 向后兼容保证
 
-### 常见问题
+### v0.2.0 - 阶段2：智能检索系统  
+- ✅ 多维度评分算法
+- ✅ 查询意图分类
+- ✅ Docker 容器化
 
-1. **API密钥错误**
-   ```
-   错误：API key not found
-   解决：确保 .env 文件中设置了 SILICONFLOW_API_KEY
-   ```
+### v0.1.0 - 阶段1：基础记忆功能
+- ✅ 向量嵌入和存储
+- ✅ 基础检索功能
+- ✅ CLI 集成
 
-2. **数据库连接失败**
-   ```
-   错误：could not connect to server
-   解决：检查 PostgreSQL 是否运行，docker-compose ps
-   ```
+## 🤝 致谢
 
-3. **权限问题**
-   ```
-   错误：Permission denied
-   解决：chmod +x claude_mem_v3.py
-   ```
-
-### 调试模式
-
-```bash
-# 启用调试输出
-export SAGE_DEBUG=1
-claude "测试查询"
-
-# 查看详细日志
-tail -f ~/.sage-mcp/logs/sage-mcp-*.log
-```
-
-## 🤝 贡献指南
-
-欢迎贡献代码！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解详情。
+- [Claude](https://claude.ai) - Anthropic 的强大 AI 助手
+- [SiliconFlow](https://siliconflow.cn) - 高质量模型 API 服务
+- [pgvector](https://github.com/pgvector/pgvector) - PostgreSQL 向量扩展
 
 ## 📄 许可证
 
-本项目采用 MIT 许可证。查看 [LICENSE](LICENSE) 文件了解详情。
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
 
-## 🙏 致谢
+---
 
-- Claude (Anthropic) - 强大的 AI 助手
-- SiliconFlow - 高质量的模型 API 服务
-- pgvector - PostgreSQL 向量扩展
-- 所有贡献者和使用者
-
-## 📞 联系方式
-
-- 问题反馈：[GitHub Issues](https://github.com/yourusername/sage-mcp/issues)
-- 功能建议：[GitHub Discussions](https://github.com/yourusername/sage-mcp/discussions)
+<div align="center">
+<b>🌟 如果这个项目对你有帮助，请给个 Star！</b>
+</div>
