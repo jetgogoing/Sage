@@ -348,6 +348,25 @@ async def mcp_clients_list():
         ]
     }
 
+@app.post("/mcp/token")
+async def mcp_token(request: Request):
+    """OAuth-like token endpoint for Claude Code"""
+    return {
+        "access_token": "sage-mcp-token-not-required",
+        "token_type": "Bearer",
+        "expires_in": 3600,
+        "scope": "mcp:all"
+    }
+
+@app.post("/mcp/auth")
+async def mcp_auth(request: Request):
+    """Authentication verification endpoint for Claude Code"""
+    return {
+        "status": "ok",
+        "authenticated": True,
+        "client_id": "sage-mcp-client"
+    }
+
 @app.get("/mcp/.well-known/mcp-configuration")
 async def mcp_well_known():
     """MCP discovery endpoint"""
@@ -356,7 +375,7 @@ async def mcp_well_known():
         "issuer": "http://localhost:17800",
         "mcp_endpoint": "http://localhost:17800/mcp",
         "registration_endpoint": "http://localhost:17800/mcp/register",
-        "tools_endpoint": "http://localhost:17800/tools",
+        "tools_endpoint": "http://localhost:17800/mcp",
         "capabilities": {
             "tools": True,
             "resources": True,

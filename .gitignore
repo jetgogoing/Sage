@@ -1,9 +1,9 @@
 # 文档目录（按用户要求）
-docs/
+# docs/  # 现在允许提交文档
 
 # 根目录文件（除README.md外全部忽略）
-/*.py
-/*.sh
+# /*.py  # 现在允许提交根目录的Python文件
+# /*.sh  # 现在允许提交Shell脚本
 /*.bat
 /*.ps1
 /*.json
@@ -97,15 +97,15 @@ coverage.xml
 # 敏感测试文件和API测试
 test_*_direct.py
 test_siliconflow_api.py
-test_*_api.py
+# test_*_api.py  # 允许一般测试文件
 
 # Sage MCP 特定忽略
 claude-wrapper.sh
-install-*.sh
+# install-*.sh  # 允许安装脚本
 *.py.backup
 recursion_lock_poc.py
 trace_imports.py
 fix_*.py
 debug_*.py
-test_*.py
-migrate.py
+# test_*.py  # 允许测试文件
+migrate.pyclaude-search-mcp/
