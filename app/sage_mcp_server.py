@@ -323,6 +323,31 @@ async def mcp_register(request: Dict[str, Any]):
         "registration_client_uri": f"http://localhost:17800/mcp/clients/sage-mcp-client"
     }
 
+@app.get("/mcp/clients/{client_id}")
+async def mcp_client_info(client_id: str):
+    """Get client information"""
+    return {
+        "client_id": client_id,
+        "client_name": "Sage MCP Client",
+        "client_secret": "not-required",
+        "grant_types": ["client_credentials"],
+        "response_types": ["token"],
+        "mcp_endpoint": "http://localhost:17800/mcp"
+    }
+
+@app.get("/mcp/clients")
+async def mcp_clients_list():
+    """List registered clients"""
+    return {
+        "clients": [
+            {
+                "client_id": "sage-mcp-client",
+                "client_name": "Sage MCP Client",
+                "created_at": "2025-01-13T00:00:00Z"
+            }
+        ]
+    }
+
 @app.get("/mcp/.well-known/mcp-configuration")
 async def mcp_well_known():
     """MCP discovery endpoint"""
@@ -335,7 +360,7 @@ async def mcp_well_known():
         "capabilities": {
             "tools": True,
             "resources": True,
-            "prompts": False,
+            "prompts": True,
             "logging": True
         }
     }
