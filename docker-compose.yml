@@ -1,8 +1,42 @@
 version: '3.8'
 
 services:
-  pg:
+  # Sage MCP Server
+  sage-mcp:
+    build: .
+    container_name: sage-mcp-server
+    ports:
+      - "17800:17800"
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    environment:
+      # Database connection
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      # MCP Server configuration
+      - MCP_SERVER_HOST=0.0.0.0
+      - MCP_SERVER_PORT=17800
+    volumes:
+      # Mount config directory for persistence
+      - sage_config:/home/sage/.config/sage-mcp
+      # Mount logs directory
+      - sage_logs:/app/logs
+    networks:
+      - sage-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:17800/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL with pgvector
+  postgres:
     image: pgvector/pgvector:pg16
+    container_name: sage-postgres
     environment:
       POSTGRES_USER: mem
       POSTGRES_PASSWORD: mem
@@ -10,6 +44,46 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - sage-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mem -d mem"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 保持向后兼容的别名
+  pg:
+    image: pgvector/pgvector:pg16
+    container_name: sage-pg-legacy
+    environment:
+      POSTGRES_USER: mem
+      POSTGRES_PASSWORD: mem
+      POSTGRES_DB: mem
+    ports:
+      - "5433:5432"  # 使用不同端口避免冲突
+    volumes:
       - ./pgdata:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - sage-network
     restart: unless-stopped
+    profiles:
+      - legacy  # 只在指定 legacy profile 时启动
+
+# 网络配置
+networks:
+  sage-network:
+    driver: bridge
+
+# 数据卷配置
+volumes:
+  postgres_data:
+    driver: local
+  sage_config:
+    driver: local
+  sage_logs:
+    driver: local
