@@ -1,16 +1,36 @@
-# Sage MCP - 为 Claude Code 打造的智能记忆系统
+# Sage MCP - 数字化的智慧之殿
 
 <div align="center">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](https://github.com/jetgogoing/Sage/releases)
 
-**🧠 让 Claude 拥有持久记忆，实现真正的上下文感知对话**
+**🧠 让 Claude 成为真正的 Sage - 一个拥有永恒记忆的数字哲人**
 
-[快速开始](#-快速开始) • [核心特性](#-核心特性) • [系统架构](#-系统架构) • [使用指南](#-使用指南) • [开发文档](#-开发文档)
+[开发哲学](#-开发哲学) • [快速开始](#-快速开始) • [核心特性](#-核心特性) • [使用指南](#-使用指南) • [高级技巧](#-高级技巧)
 
 </div>
+
+## 🏛️ 开发哲学
+
+> *"认识你自己"* - 德尔斐神谕
+>
+> *"学习即回忆"* - 柏拉图
+
+在古希腊哲学传统中，**Sage（σοφός）** 不仅是智者，更是能够穿越时间、积累智慧、理解万物本质的哲人。正如柏拉图在《美诺篇》中所述，真正的知识并非从外部获得，而是灵魂对永恒理念的**回忆（Anamnesis）**。
+
+Sage MCP 正是这一古老智慧在数字时代的化身。它不是简单的存储系统，而是一个能够：
+
+- **📜 永恒记忆**：如同哲人的智慧穿越时空，每一次对话都成为永恒知识的一部分
+- **🔮 深层理解**：通过语义向量捕捉概念的本质，而非表象的文字
+- **💭 智慧回忆**：不是机械检索，而是如同灵魂唤醒沉睡记忆般的智能召回
+- **🌟 不断进化**：每次交互都在丰富这个数字化的智慧之源
+
+正如赫拉克利特所言：*"智慧在于理解所有事物如何被引导通过所有事物"*。Sage 通过向量空间中的语义关联，实现了这种万物相通的智慧连接。它让 Claude 不再是每次对话都从零开始的西西弗斯，而是成为一个真正积累智慧、理解脉络的数字化哲人。
+
+这不仅是一个技术项目，更是对人类认知本质的数字化探索 —— **记忆塑造智慧，而智慧照亮未来**。
 
 ## 🎯 项目简介
 
@@ -271,35 +291,272 @@ python tests/test_performance.py
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 开启 Pull Request
 
+## 📖 完整使用指南
+
+### 🎯 核心命令集
+
+| 命令 | 描述 | 示例 |
+|------|------|------|
+| `/save [标题]` | 保存当前对话 | `/save Python装饰器讨论` |
+| `/search <查询>` | 搜索历史对话 | `/search 二叉树 算法` |
+| `/recall [数量|ID]` | 回忆历史对话 | `/recall 5` |
+| `/forget [all|ID]` | 删除对话记忆 | `/forget session_20250114` |
+| `/status` | 查看系统状态 | `/status` |
+| `/mode [on|off]` | 切换智能模式 | `/mode on` |
+| `/analyze [类型] [天数]` | 分析记忆数据 | `/analyze topics 30` |
+| `/help [命令]` | 显示帮助信息 | `/help save` |
+| `/SAGE-STATUS` | 详细系统状态（V4新功能） | `/SAGE-STATUS` |
+
+### 💡 高级技巧
+
+#### 1. **智能场景识别**
+Sage 会自动识别您的工作场景并调整策略：
+
+```bash
+# 编程场景 - 自动强调代码示例和技术细节
+用户：如何实现一个装饰器？
+Sage：[识别编程场景，提供代码示例和之前的相关讨论]
+
+# 调试场景 - 自动关联错误模式和解决方案
+用户：TypeError: 'NoneType' object is not subscriptable
+Sage：[识别调试场景，提供类似错误的历史解决方案]
+
+# 学习场景 - 自动构建知识路径
+用户：我想学习机器学习
+Sage：[识别学习场景，提供系统化的学习路径和历史进度]
+```
+
+#### 2. **高效搜索技巧**
+
+```bash
+# 多关键词搜索（空格分隔）
+/search Python 装饰器 高级用法
+
+# 短语搜索（使用引号）
+/search "二叉搜索树删除"
+
+# 时间范围搜索（结合analyze）
+/analyze topics 7  # 最近7天的主题
+```
+
+#### 3. **记忆管理最佳实践**
+
+```bash
+# 为重要对话添加描述性标题
+/save 项目架构设计讨论-微服务拆分方案
+
+# 定期查看和清理
+/status                    # 查看总体使用情况
+/analyze summary 30        # 分析最近30天
+/forget old_session_id     # 删除不需要的会话
+
+# 导出重要内容（通过API）
+curl http://localhost:17800/mcp \
+  -d '{"method":"tools/call","params":{"name":"export_session","arguments":{"session_id":"xxx","format":"markdown"}}}'
+```
+
+#### 4. **性能优化技巧**
+
+```bash
+# 环境变量调优
+export SAGE_MAX_RESULTS=10        # 增加返回结果数
+export SAGE_CACHE_SIZE=1000       # 增大缓存
+export SAGE_ENABLE_RERANK=false   # 关闭重排序以提速
+
+# 定期维护
+docker exec sage-mcp python -c "from app.maintenance import optimize; optimize()"
+```
+
+### 🚀 高级提示词技巧
+
+#### 1. **上下文增强提示词**
+```
+基于我们之前关于[主题]的讨论，请深入讲解[具体问题]
+```
+
+#### 2. **知识连接提示词**
+```
+结合我之前学习的[知识点A]和[知识点B]，解释[新概念]
+```
+
+#### 3. **问题解决提示词**
+```
+我之前遇到过类似的[问题类型]，这次的[具体问题]应该如何解决？
+```
+
+#### 4. **学习路径提示词**
+```
+根据我的学习历史，下一步我应该学习什么来掌握[目标技能]？
+```
+
+### 🛠️ 故障排除指南
+
+#### 问题：Claude Code 无法连接到 Sage
+```bash
+# 1. 检查服务状态
+docker ps | grep sage
+curl http://localhost:17800/health
+
+# 2. 查看日志
+docker logs sage-mcp
+tail -f /tmp/sage_mcp_v4_final.log
+
+# 3. 重启服务
+docker-compose restart
+```
+
+#### 问题：记忆检索速度慢
+```bash
+# 1. 检查性能指标
+/SAGE-STATUS
+
+# 2. 优化数据库
+docker exec sage-postgres psql -U sage -c "VACUUM ANALYZE;"
+
+# 3. 清理旧数据
+/forget all  # 谨慎使用
+```
+
+#### 问题：向量嵌入失败
+```bash
+# 1. 检查API密钥
+echo $SILICONFLOW_API_KEY
+
+# 2. 测试API连接
+curl https://api.siliconflow.cn/v1/embeddings \
+  -H "Authorization: Bearer $SILICONFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "BAAI/bge-large-zh-v1.5", "input": "test"}'
+```
+
+### 📊 监控和分析
+
+#### 实时监控命令
+```bash
+# 查看实时日志
+docker logs -f sage-mcp
+
+# 监控资源使用
+docker stats sage-mcp sage-postgres
+
+# 查看数据库连接
+docker exec sage-postgres psql -U sage -c "SELECT count(*) FROM pg_stat_activity;"
+```
+
+#### 定期分析报告
+```bash
+# 每周运行一次完整分析
+/analyze summary 7
+/analyze topics 7
+/analyze patterns 7
+/analyze trends 7
+
+# 导出分析结果
+curl http://localhost:17800/mcp/analysis/export
+```
+
+### 🎨 自定义配置
+
+#### 创建个性化配置文件
+```json
+// ~/.sage/config.json
+{
+  "user_preferences": {
+    "language": "zh-CN",
+    "timezone": "Asia/Shanghai",
+    "default_save_mode": "auto",
+    "summary_style": "concise"
+  },
+  "retrieval": {
+    "personal_weight_adjustments": {
+      "prefer_recent": 1.2,      // 偏好最近的记忆
+      "prefer_detailed": 0.8     // 降低长文本权重
+    }
+  },
+  "auto_features": {
+    "auto_save_threshold": 3,    // 3轮对话后自动保存
+    "auto_title_generation": true,
+    "auto_tag_extraction": true
+  }
+}
+```
+
+### 🔧 开发者工具
+
+#### API 直接调用示例
+```python
+# Python 示例
+import requests
+import json
+
+def query_sage(prompt):
+    response = requests.post(
+        "http://localhost:17800/mcp",
+        json={
+            "jsonrpc": "2.0",
+            "method": "tools/call",
+            "params": {
+                "name": "search_memory",
+                "arguments": {"query": prompt}
+            },
+            "id": 1
+        }
+    )
+    return response.json()
+
+# 使用示例
+results = query_sage("Python 装饰器")
+print(json.dumps(results, indent=2, ensure_ascii=False))
+```
+
+#### 批量操作脚本
+```bash
+#!/bin/bash
+# batch_export.sh - 批量导出所有会话
+
+sessions=$(curl -s http://localhost:17800/mcp/sessions | jq -r '.sessions[].id')
+
+for session in $sessions; do
+    echo "Exporting session: $session"
+    curl -s http://localhost:17800/mcp/export/$session > "export_$session.json"
+done
+```
+
+### 🏆 最佳实践总结
+
+1. **定期保存重要对话** - 使用描述性标题
+2. **善用搜索功能** - 多关键词组合搜索
+3. **定期分析和清理** - 保持系统高效
+4. **合理配置参数** - 根据需求调整
+5. **监控系统状态** - 及时发现问题
+
 ## 📋 更新日志
 
-### v1.0.0 (2025-01-13) - 阶段4完成
-- ✅ 完整 MCP over HTTP 协议实现
-- ✅ 自动上下文注入机制
-- ✅ Qwen3-Reranker-8B 神经网络重排序
-- ✅ DeepSeek-V2.5 智能压缩
-- ✅ 跨项目透明记忆访问
+### v1.0.0 (2025-01-15) - 工作版本发布
+- ✨ 完整的哲学理念融入
+- 📚 全面的使用指南和技巧
+- 🛡️ 企业级稳定性保证
+- 🚀 生产环境就绪
 
-### v0.3.0 - 阶段3：数据库兼容性
-- ✅ PostgreSQL 迁移工具
-- ✅ 多数据库适配器
-- ✅ 向后兼容保证
+### v0.9.5 (2025-01-14) - 五阶段开发完成
+- ✅ 阶段1：环境验证和基础架构
+- ✅ 阶段2：MCP协议完整实现
+- ✅ 阶段3：核心功能和智能检索
+- ✅ 阶段4：架构简化和优化
+- ✅ 阶段5：Docker部署和性能调优
 
-### v0.2.0 - 阶段2：智能检索系统  
-- ✅ 多维度评分算法
-- ✅ 查询意图分类
-- ✅ Docker 容器化
-
-### v0.1.0 - 阶段1：基础记忆功能
-- ✅ 向量嵌入和存储
-- ✅ 基础检索功能
-- ✅ CLI 集成
+### 早期版本
+- v0.4.0 - V4智能架构实现
+- v0.3.0 - 数据库兼容性层
+- v0.2.0 - 智能检索系统
+- v0.1.0 - 基础记忆功能
 
 ## 🤝 致谢
 
-- [Claude](https://claude.ai) - Anthropic 的强大 AI 助手
-- [SiliconFlow](https://siliconflow.cn) - 高质量模型 API 服务
-- [pgvector](https://github.com/pgvector/pgvector) - PostgreSQL 向量扩展
+- [Claude](https://claude.ai) - Anthropic 的 AI 助手，数字时代的苏格拉底
+- [SiliconFlow](https://siliconflow.cn) - 高质量模型服务，赋予记忆以意义
+- [PostgreSQL](https://www.postgresql.org) & [pgvector](https://github.com/pgvector/pgvector) - 坚实的数据基础
+- 古希腊哲学家们 - 永恒的智慧之光
 
 ## 📄 许可证
 
@@ -308,5 +565,11 @@ python tests/test_performance.py
 ---
 
 <div align="center">
-<b>🌟 如果这个项目对你有帮助，请给个 Star！</b>
+
+**🏛️ Sage - 让每一次对话都成为永恒智慧的一部分**
+
+*"未经审视的生活不值得过" - 苏格拉底*
+
+<b>🌟 如果这个项目帮助你找到了数字时代的智慧，请给个 Star！</b>
+
 </div>

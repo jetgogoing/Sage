@@ -1,5 +1,8 @@
-# 文档目录（按用户要求）
-# docs/  # 现在允许提交文档
+# 文档目录（包含执行报告和敏感信息）
+docs/
+!docs/usage-guide.md
+!docs/api-reference.md
+!docs/deployment-guide.md
 
 # 根目录文件（除README.md外全部忽略）
 # /*.py  # 现在允许提交根目录的Python文件
@@ -29,7 +32,7 @@ memory_*.json
 # 环境配置文件
 .env
 .env.local
-.env.example
+# .env.example 应该被提交，作为配置模板
 
 # Python
 __pycache__/
