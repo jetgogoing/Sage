@@ -144,7 +144,6 @@ echo ""
 echo "--- 6. 创建管理脚本 ---"
 
 # 确保脚本可执行
-chmod +x sage_cli 2>/dev/null || echo "⚠️  sage_cli 脚本不存在"
 chmod +x sage_manage 2>/dev/null || echo "⚠️  sage_manage 脚本不存在"
 
 echo "✅ 管理脚本权限设置完成"
@@ -158,7 +157,7 @@ docker compose ps
 
 echo ""
 echo "📊 记忆系统状态:"
-python3 sage_memory_cli.py status 2>/dev/null || echo "⚠️  记忆系统状态检查失败，但不影响核心功能"
+python3 sage_manage status 2>/dev/null || echo "⚠️  记忆系统状态检查失败，但不影响核心功能"
 
 # 8. 显示使用说明
 echo ""
@@ -166,10 +165,9 @@ echo "🎉 Sage 记忆系统启动完成！"
 echo "================================="
 echo ""
 echo "📋 使用方法:"
-echo "  1. 带记忆的 Claude 对话:"
-echo "     ./sage_cli \"你的问题\""
-echo "     或"
-echo "     sage \"你的问题\"  # 如果已设置别名"
+echo "  1. 在 Claude Code 中使用记忆系统:"
+echo "     - 记忆会自动保存和检索"
+echo "     - 无需手动操作"
 echo ""
 echo "  2. 管理记忆系统:"
 echo "     ./sage_manage status          # 查看状态"

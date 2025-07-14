@@ -3,10 +3,10 @@
 
 # 确保 Docker 容器正在运行
 echo "Checking Sage Docker container..." >&2
-if ! docker ps | grep -q sage-docker-app; then
+if ! docker ps | grep -q sage-mcp-server; then
     echo "Starting Sage Docker container..." >&2
     cd "$(dirname "$0")"
-    docker-compose -f docker-compose-sage.yml up -d
+    docker-compose -f docker-compose.optimized.yml up -d
     sleep 5
 fi
 

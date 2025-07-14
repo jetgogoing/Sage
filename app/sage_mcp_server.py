@@ -702,6 +702,16 @@ async def handle_mcp_request(request: MCPRequest):
                     }
                 )
         
+        elif request.method == "notifications/initialized":
+            # Handle the initialization complete notification
+            # This is a notification, so we don't need to return anything
+            # Just acknowledge that initialization is complete
+            logger.info("Received initialization complete notification")
+            return MCPResponse(
+                id=request.id,
+                result=None
+            )
+        
         else:
             return MCPResponse(
                 id=request.id,

@@ -28,60 +28,26 @@ except Exception as e:
     exit(1)
 "
 
-# 3. 查找Claude CLI路径
-echo "🔍 查找Claude CLI..."
-CLAUDE_PATH=""
-if command -v claude &> /dev/null; then
-    CLAUDE_PATH=$(which claude)
-    echo "✅ 找到Claude CLI: $CLAUDE_PATH"
-elif [ -f "/usr/local/bin/claude" ]; then
-    CLAUDE_PATH="/usr/local/bin/claude"
-    echo "✅ 找到Claude CLI: $CLAUDE_PATH"
-elif [ -f "$HOME/.claude/local/node_modules/.bin/claude" ]; then
-    CLAUDE_PATH="$HOME/.claude/local/node_modules/.bin/claude"
-    echo "✅ 找到Claude CLI: $CLAUDE_PATH"
-else
-    echo "❌ 未找到Claude CLI，请手动指定路径"
-    exit 1
-fi
-
-# 4. 创建便捷脚本
-echo "📝 创建便捷使用脚本..."
-cat > sage_cli << 'EOF'
-#!/bin/bash
-export SILICONFLOW_API_KEY="sk-xtjxdvdwjfiiggwxkojmiryhcfjliywfzurbtsorwvgkimdg"
-export CLAUDE_CLI_PATH="CLAUDE_PATH_PLACEHOLDER"
-export SAGE_HOME="/Users/jet/sage"
-cd "$SAGE_HOME"
-python3 sage_mem.py "$@"
-EOF
-
-# 替换占位符
-sed -i '' "s|CLAUDE_PATH_PLACEHOLDER|$CLAUDE_PATH|g" sage_cli
-chmod +x sage_cli
-
-# 5. 创建管理脚本
-cat > sage_manage << 'EOF'
+# 3. 创建管理脚本
+echo "📝 创建管理脚本..."
+if [ ! -f sage_manage ]; then
+    cat > sage_manage << 'EOF'
 #!/bin/bash
 export SILICONFLOW_API_KEY="sk-xtjxdvdwjfiiggwxkojmiryhcfjliywfzurbtsorwvgkimdg"
 export SAGE_HOME="/Users/jet/sage"
 cd "$SAGE_HOME"
 python3 sage_memory_cli.py "$@"
 EOF
-chmod +x sage_manage
+    chmod +x sage_manage
+fi
 
 echo ""
 echo "🎉 设置完成！使用方法："
 echo ""
-echo "1. 带记忆的Claude对话："
-echo "   ./sage_cli \"你的问题\""
+echo "1. MCP服务已经准备就绪，可在Claude Code中使用"
 echo ""
 echo "2. 管理记忆系统："
 echo "   ./sage_manage status          # 查看状态"
 echo "   ./sage_manage search \"关键词\"  # 搜索记忆"
 echo "   ./sage_manage clear --force   # 清除记忆"
-echo ""
-echo "3. 或者设置别名到PATH中："
-echo "   export PATH=\"/Users/jet/sage:\$PATH\""
-echo "   echo 'alias claude=\"/Users/jet/sage/sage_cli\"' >> ~/.zshrc"
 echo ""

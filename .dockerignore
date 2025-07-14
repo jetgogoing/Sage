@@ -36,3 +36,11 @@ temp/
 *.tar.gz
 *.zip
 migration_git_status.txt
+__pycache__
+.git
+.github
+.env
+.pytest_cache
+*.sqlite
+docker-compose*.yml
+Dockerfile*
