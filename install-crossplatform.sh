@@ -184,7 +184,7 @@ cat > "$WRAPPER_PATH" << EOF
 
 # 配置
 PYTHON_PATH="\${SAGE_PYTHON_PATH:-python3}"
-MEMORY_SCRIPT="\${SAGE_MEMORY_SCRIPT:-$SAGE_PATH/claude_mem_crossplatform.py}"
+MEMORY_SCRIPT="\${SAGE_MEMORY_SCRIPT:-$SAGE_PATH/sage_crossplatform.py}"
 CONFIG_DIR="\${SAGE_CONFIG_DIR:-$CONFIG_DIR}"
 
 # 导出配置目录供 Python 脚本使用
@@ -325,7 +325,7 @@ fi
 
 # 检查记忆脚本
 echo -n "记忆脚本: "
-if [ -f "$SAGE_PATH/claude_mem_crossplatform.py" ]; then
+if [ -f "$SAGE_PATH/sage_crossplatform.py" ]; then
     echo -e "\033[32m存在\033[0m"
 else
     echo -e "\033[31m缺失\033[0m"

@@ -115,7 +115,7 @@ cat > ~/.local/bin/claude-with-memory << 'EOF'
 # 确保Sage MCP服务器运行
 if ! curl -s http://localhost:17800/health > /dev/null; then
     echo "启动Sage MCP服务器..."
-    cd "/Volumes/1T HDD/Sage" && python3 app/sage_mcp_server.py &
+    cd "/Users/jet/sage" && python3 app/sage_mcp_server.py &
     sleep 5
 fi
 

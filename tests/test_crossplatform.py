@@ -23,7 +23,7 @@ sys.path.insert(0, str(project_root))
 
 # 导入要测试的模块
 try:
-    from claude_mem_crossplatform import CrossPlatformClaude
+    from sage_crossplatform import CrossPlatformClaude
     from migrate import MigrationTool
 except ImportError as e:
     print(f"导入错误: {e}")

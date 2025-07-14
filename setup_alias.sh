@@ -21,13 +21,13 @@ echo "📁 配置文件: $SHELL_CONFIG"
 echo ""
 
 # 检查是否已存在别名
-if grep -q "sage_claude" "$SHELL_CONFIG" 2>/dev/null; then
+if grep -q "sage_cli" "$SHELL_CONFIG" 2>/dev/null; then
     echo "⚠️  别名已存在，跳过设置"
 else
     echo "✅ 添加Sage别名到 $SHELL_CONFIG"
     echo "" >> "$SHELL_CONFIG"
     echo "# Sage 记忆系统别名" >> "$SHELL_CONFIG"
-    echo 'alias claude="/Volumes/1T HDD/Sage/sage_claude"' >> "$SHELL_CONFIG"
+    echo 'alias claude="/Volumes/1T HDD/Sage/sage_cli"' >> "$SHELL_CONFIG"
     echo 'alias sage="/Volumes/1T HDD/Sage/sage_manage"' >> "$SHELL_CONFIG"
     echo 'export PATH="/Volumes/1T HDD/Sage:$PATH"' >> "$SHELL_CONFIG"
 fi
@@ -42,5 +42,5 @@ echo "然后就可以直接使用："
 echo "  claude \"你的问题\"              # 带记忆的Claude对话"
 echo "  sage status                    # 查看记忆系统状态"
 echo "  sage search \"关键词\"           # 搜索记忆"
-echo "  sage_claude \"问题\"             # 完整命令名"
+echo "  sage_cli \"问题\"             # 完整命令名"
 echo ""

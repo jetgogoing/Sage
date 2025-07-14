@@ -1,5 +1,5 @@
 #!/bin/bash
-# claude-sage - 一键启动Claude Sage记忆系统
+# sage - 一键启动Claude Sage记忆系统
 # 🚀 自动启动所有服务，显示状态，然后进入交互模式
 
 set -euo pipefail
@@ -10,7 +10,7 @@ PROJECT_ROOT="$SCRIPT_DIR"
 
 START_SERVICES_SCRIPT="$PROJECT_ROOT/start_all_services.sh"
 SAGE_MANAGE_SCRIPT="$PROJECT_ROOT/sage_manage"
-SAGE_CLAUDE_SCRIPT="$PROJECT_ROOT/sage_claude"
+SAGE_CLAUDE_SCRIPT="$PROJECT_ROOT/sage_cli"
 
 # 显示启动信息
 echo "🚀 Claude Sage 一键启动"
@@ -86,7 +86,7 @@ echo "🚀 正在启动原生Claude CLI（带记忆增强）..."
 echo "现在你将进入完整的Claude CLI环境，包含所有原生功能！"
 echo ""
 
-# 直接调用sage_claude，让它处理所有交互
+# 直接调用sage_cli，让它处理所有交互
 # sage_mem.py会包装原生Claude CLI，保持所有功能的同时增加记忆
 "$SAGE_CLAUDE_SCRIPT" "$@"
 

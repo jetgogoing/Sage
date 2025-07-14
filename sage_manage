@@ -1,5 +1,5 @@
 #!/bin/bash
 export SILICONFLOW_API_KEY="sk-xtjxdvdwjfiiggwxkojmiryhcfjliywfzurbtsorwvgkimdg"
-export SAGE_HOME="/Volumes/1T HDD/Sage"
+export SAGE_HOME="/Users/jet/sage"
 cd "$SAGE_HOME"
 python3 sage_memory_cli.py "$@"

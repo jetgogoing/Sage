@@ -21,13 +21,13 @@ Claude 没有注入历史上下文，回答的是无记忆模式的默认回答�
 ```bash
 echo $CLAUDE_CLI_PATH
 which claude
-type claude-sage
+type sage
 ```
 
 - **正确设置方式（示例）：**
 ```bash
 export CLAUDE_CLI_PATH=/usr/local/bin/claude
-alias claude-sage='python /your/path/sage_mem.py'
+alias sage='python /your/path/sage_mem.py'
 ```
 
 ---

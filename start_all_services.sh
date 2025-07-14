@@ -8,7 +8,7 @@ echo "🚀 Sage 记忆系统一键启动"
 echo "================================="
 
 # 进入项目目录
-PROJECT_DIR="/Volumes/1T HDD/Sage"
+PROJECT_DIR="/Users/jet/sage"
 cd "$PROJECT_DIR"
 
 echo "📂 当前目录: $(pwd)"
@@ -144,7 +144,7 @@ echo ""
 echo "--- 6. 创建管理脚本 ---"
 
 # 确保脚本可执行
-chmod +x sage_claude 2>/dev/null || echo "⚠️  sage_claude 脚本不存在"
+chmod +x sage_cli 2>/dev/null || echo "⚠️  sage_cli 脚本不存在"
 chmod +x sage_manage 2>/dev/null || echo "⚠️  sage_manage 脚本不存在"
 
 echo "✅ 管理脚本权限设置完成"
@@ -167,9 +167,9 @@ echo "================================="
 echo ""
 echo "📋 使用方法:"
 echo "  1. 带记忆的 Claude 对话:"
-echo "     ./sage_claude \"你的问题\""
+echo "     ./sage_cli \"你的问题\""
 echo "     或"
-echo "     claude-sage \"你的问题\"  # 如果已设置别名"
+echo "     sage \"你的问题\"  # 如果已设置别名"
 echo ""
 echo "  2. 管理记忆系统:"
 echo "     ./sage_manage status          # 查看状态"

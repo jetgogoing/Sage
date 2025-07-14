@@ -1,0 +1,38 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# 测试和文档
+tests/
+docs/
+*.md
+!README.md
+
+# 开发文件
+.git/
+.gitignore
+.DS_Store
+*.log
+*.swp
+backups/
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# 临时文件
+tmp/
+temp/
+
+# 其他
+*.tar.gz
+*.zip
+migration_git_status.txt

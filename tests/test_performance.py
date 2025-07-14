@@ -91,7 +91,7 @@ class TestPerformance:
         """预热系统"""
         # 执行一次简单查询来加载模块
         subprocess.run(
-            ['python', 'claude_mem_v3.py', 'test'],
+            ['python', 'sage_minimal.py', 'test'],
             capture_output=True,
             cwd=cls.base_dir
         )
@@ -104,7 +104,7 @@ class TestPerformance:
             start_time = time.time()
             
             result = subprocess.run(
-                ['python', 'claude_mem_v3.py', '--help'],
+                ['python', 'sage_minimal.py', '--help'],
                 capture_output=True,
                 text=True,
                 cwd=self.base_dir
@@ -219,7 +219,7 @@ class TestPerformance:
         def run_query(query):
             start_time = time.time()
             result = subprocess.run(
-                ['python', 'claude_mem_v3.py', query, '--no-memory'],
+                ['python', 'sage_minimal.py', query, '--no-memory'],
                 capture_output=True,
                 text=True,
                 cwd=self.base_dir,
@@ -334,7 +334,7 @@ class TestResourceUsage:
         # 执行多次操作
         for _ in range(10):
             subprocess.run(
-                ['python', 'claude_mem_v3.py', 'test', '--no-memory'],
+                ['python', 'sage_minimal.py', 'test', '--no-memory'],
                 capture_output=True,
                 cwd=Path(__file__).parent.parent
             )

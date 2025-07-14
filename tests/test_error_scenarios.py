@@ -16,10 +16,10 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # 导入需要测试的模块和异常
-from claude_mem_v3 import ImprovedCrossplatformClaude, ParsedArgs
+from sage_minimal import ImprovedCrossplatformClaude, ParsedArgs
 from exceptions import (
     SageBaseException, ConfigurationError, MemoryProviderError,
-    ClaudeExecutionError, ClaudeNotFoundError, PlatformCompatibilityError,
+    SageExecutionError, SageNotFoundError, PlatformCompatibilityError,
     AsyncRuntimeError, ResourceManagementError, ValidationError,
     EnhancementError, RetrievalError
 )
@@ -79,7 +79,7 @@ class TestExceptionHandling(unittest.TestCase):
         # 模拟增强错误
         with patch.object(self.app, '_prompt_enhancer', None):
             with patch.object(self.app, '_stage2_enabled', True):
-                with patch('claude_mem_v3.create_prompt_enhancer',
+                with patch('sage_minimal.create_prompt_enhancer',
                           side_effect=EnhancementError("增强器初始化失败")):
                     
                     # 尝试获取增强器
@@ -145,7 +145,7 @@ class TestExceptionHandling(unittest.TestCase):
     def test_configuration_error_handling(self):
         """测试配置错误处理"""
         # 模拟配置错误
-        with patch('claude_mem_v3.get_config_adapter',
+        with patch('sage_minimal.get_config_adapter',
                   side_effect=ConfigurationError("配置文件损坏")):
             
             # 尝试创建应用实例应该失败

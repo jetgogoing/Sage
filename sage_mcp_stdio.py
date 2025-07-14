@@ -64,6 +64,11 @@ async def handle_stdio():
                 logger.error(f"Invalid JSON: {e}")
                 continue
             
+            # Convert numeric ID to string for compatibility
+            request_id = request.get("id")
+            if request_id is not None and isinstance(request_id, int):
+                request["id"] = str(request_id)
+            
             # Forward to HTTP server
             response = await send_request(
                 method=request.get("method"),

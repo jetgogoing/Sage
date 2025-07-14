@@ -13,7 +13,7 @@ if ! command -v claude &> /dev/null; then
 fi
 
 # 获取Sage项目路径
-SAGE_PATH="/Volumes/1T HDD/Sage"
+SAGE_PATH="/Users/jet/sage"
 if [ ! -d "$SAGE_PATH" ]; then
     echo "请输入Sage项目的完整路径:"
     read -r SAGE_PATH
@@ -94,7 +94,7 @@ if ! grep -q "alias claude=" "$SHELL_RC"; then
 fi
 
 # 4. 创建系统级集成脚本
-sudo tee /usr/local/bin/claude-memory > /dev/null << 'EOF'
+sudo tee /usr/local/bin/sage-memory > /dev/null << 'EOF'
 #!/bin/bash
 # Claude Code with Automatic Memory
 
@@ -109,7 +109,7 @@ fi
 exec claude "$@"
 EOF
 
-sudo chmod +x /usr/local/bin/claude-memory
+sudo chmod +x /usr/local/bin/sage-memory
 
 echo ""
 echo "✅ 安装完成！"
@@ -117,7 +117,7 @@ echo ""
 echo "🎯 使用方法:"
 echo "  1. 重新加载shell配置: source $SHELL_RC"
 echo "  2. 使用命令 'claude' 启动带自动记忆的Claude Code"
-echo "  3. 或使用 'claude-memory' 确保记忆系统运行"
+echo "  3. 或使用 'sage-memory' 确保记忆系统运行"
 echo ""
 echo "🔍 验证安装:"
 echo "  claude mcp list  # 应该看到sage服务器"

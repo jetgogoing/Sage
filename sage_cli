@@ -1,6 +1,6 @@
 #!/bin/bash
 export SILICONFLOW_API_KEY="sk-xtjxdvdwjfiiggwxkojmiryhcfjliywfzurbtsorwvgkimdg"
 export CLAUDE_CLI_PATH="/Users/jet/.claude/local/node_modules/.bin/claude"
-export SAGE_HOME="/Volumes/1T HDD/Sage"
+export SAGE_HOME="/Users/jet/sage"
 cd "$SAGE_HOME"
 python3 sage_mem.py "$@"

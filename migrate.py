@@ -366,7 +366,7 @@ class MigrationTool:
         """检测包装器版本"""
         try:
             content = wrapper_path.read_text()
-            if 'claude_mem_crossplatform.py' in content:
+            if 'sage_crossplatform.py' in content:
                 return 'v2.0'
             elif 'claude_mem_v2.py' in content:
                 return 'v1.2'

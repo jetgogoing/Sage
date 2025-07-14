@@ -6,7 +6,7 @@ echo "🛑 Sage 记忆系统服务停止"
 echo "================================="
 
 # 进入项目目录
-PROJECT_DIR="/Volumes/1T HDD/Sage"
+PROJECT_DIR="/Users/jet/sage"
 cd "$PROJECT_DIR"
 
 echo "📂 当前目录: $(pwd)"

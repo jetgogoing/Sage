@@ -23,10 +23,10 @@ def test_imports():
         return False
     
     try:
-        import claude_mem_v3
-        print("✅ claude_mem_v3 模块导入成功")
+        import sage_minimal
+        print("✅ sage_minimal 模块导入成功")
     except Exception as e:
-        print(f"❌ claude_mem_v3 模块导入失败: {e}")
+        print(f"❌ sage_minimal 模块导入失败: {e}")
         return False
     
     return True
@@ -56,7 +56,7 @@ def test_argument_parsing():
     """测试参数解析"""
     print("\n3. 测试参数解析...")
     try:
-        from claude_mem_v3 import ImprovedCrossplatformClaude, ParsedArgs
+        from sage_minimal import ImprovedCrossplatformClaude, ParsedArgs
         
         app = ImprovedCrossplatformClaude()
         
@@ -83,7 +83,7 @@ def test_find_claude():
     """测试查找 Claude"""
     print("\n4. 测试查找 Claude...")
     try:
-        from claude_mem_v3 import ImprovedCrossplatformClaude
+        from sage_minimal import ImprovedCrossplatformClaude
         
         app = ImprovedCrossplatformClaude()
         claude_path = app.find_claude_executable()

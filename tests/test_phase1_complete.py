@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 阶段1完整测试套件
-测试 claude_mem_v3 的所有功能
+测试 sage_minimal 的所有功能
 """
 
 import os
@@ -17,7 +17,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # 导入需要测试的模块
-from claude_mem_v3 import ImprovedCrossplatformClaude, ParsedArgs
+from sage_minimal import ImprovedCrossplatformClaude, ParsedArgs
 from memory import (
     save_conversation_turn, 
     get_memory_stats, 
@@ -166,7 +166,7 @@ print("This is a mock response for testing.")
         env['ORIGINAL_CLAUDE_PATH'] = f'python3 "{self.mock_claude}"'
         
         cmd = [
-            "python3", str(project_root / "claude_mem_v3.py"),
+            "python3", str(project_root / "sage_minimal.py"),
             "--no-memory", "Test prompt"
         ]
         
@@ -186,7 +186,7 @@ print("This is a mock response for testing.")
     def test_memory_stats_command(self):
         """测试记忆统计命令"""
         cmd = [
-            "python3", str(project_root / "claude_mem_v3.py"),
+            "python3", str(project_root / "sage_minimal.py"),
             "--memory-stats"
         ]
         
@@ -207,7 +207,7 @@ print("This is a mock response for testing.")
         env['ORIGINAL_CLAUDE_PATH'] = f'python3 "{self.mock_claude}"'
         
         cmd = [
-            "python3", str(project_root / "claude_mem_v3.py"),
+            "python3", str(project_root / "sage_minimal.py"),
             "What is machine learning?"
         ]
         

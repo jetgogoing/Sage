@@ -26,11 +26,11 @@ sys.path.insert(0, '/Volumes/1T HDD/Sage')
 
 print("===== 开始测试执行流程 =====")
 
-# 模拟运行 claude_mem_v3.py
-import claude_mem_v3
+# 模拟运行 sage_minimal.py
+import sage_minimal
 
 # 创建实例
-app = claude_mem_v3.ImprovedCrossplatformClaude()
+app = sage_minimal.ImprovedCrossplatformClaude()
 
 # 测试参数
 test_args = ["测试家庭信息：我的家人有吴鹏、李诗韵、吴宇恒、吴宇晨"]

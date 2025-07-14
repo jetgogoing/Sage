@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-集成测试 - 测试完整的 claude_mem_v3 流程
+集成测试 - 测试完整的 sage_minimal 流程
 """
 
 import os
@@ -34,7 +34,7 @@ def test_full_conversation():
     
     # 执行 claude_mem_v3
     cmd = [
-        "python3", str(project_root / "claude_mem_v3.py"),
+        "python3", str(project_root / "sage_minimal.py"),
         "--verbose",
         "这是一个测试查询，请帮我解释 Python 装饰器的工作原理"
     ]
@@ -84,7 +84,7 @@ def test_memory_stats():
     if 'SAGE_RECURSION_GUARD' in os.environ:
         del os.environ['SAGE_RECURSION_GUARD']
     
-    cmd = ["python3", str(project_root / "claude_mem_v3.py"), "--memory-stats"]
+    cmd = ["python3", str(project_root / "sage_minimal.py"), "--memory-stats"]
     
     try:
         result = subprocess.run(
@@ -117,7 +117,7 @@ def test_no_memory_mode():
         del os.environ['SAGE_RECURSION_GUARD']
     
     cmd = [
-        "python3", str(project_root / "claude_mem_v3.py"),
+        "python3", str(project_root / "sage_minimal.py"),
         "--no-memory",
         "测试无记忆模式"
     ]

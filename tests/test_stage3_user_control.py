@@ -155,7 +155,7 @@ class TestVisualFeedback:
     def test_print_memory_hint(self):
         """测试记忆提示打印功能"""
         # 这里我们只测试函数是否存在
-        from claude_mem_v3 import ImprovedCrossplatformClaude
+        from sage_minimal import ImprovedCrossplatformClaude
         
         # 创建实例
         mem = ImprovedCrossplatformClaude()

@@ -65,8 +65,8 @@ class EmbeddingServiceError(MemoryProviderError):
         super().__init__(message, provider_type="embedding", service=service, **kwargs)
 
 
-class ClaudeExecutionError(SageBaseException):
-    """Claude 执行相关错误"""
+class SageExecutionError(SageBaseException):
+    """Sage 执行相关错误"""
     
     def __init__(self, message: str, command: Optional[str] = None, 
                  return_code: Optional[int] = None, **kwargs):
@@ -79,11 +79,11 @@ class ClaudeExecutionError(SageBaseException):
         super().__init__(message, details)
 
 
-class ClaudeNotFoundError(ClaudeExecutionError):
-    """Claude CLI 未找到错误"""
+class SageNotFoundError(SageExecutionError):
+    """Sage CLI 未找到错误"""
     
     def __init__(self, searched_paths: Optional[list] = None):
-        message = "未找到 Claude CLI"
+        message = "未找到 Sage CLI"
         super().__init__(message, searched_paths=searched_paths)
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""测试 claude_mem.py 注入器的基本功能"""
+"""测试 sage_memory.py 注入器的基本功能"""
 
 import sys
 import os
@@ -8,8 +8,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 def test_import():
     """测试模块导入"""
     try:
-        import claude_mem
-        print("✓ claude_mem.py 模块导入成功")
+        import sage_memory
+        print("✓ sage_memory.py 模块导入成功")
         return True
     except Exception as e:
         print(f"✗ 模块导入失败: {e}")
@@ -17,7 +17,7 @@ def test_import():
 
 def test_cli_path():
     """测试 Claude CLI 路径"""
-    from claude_mem import CLAUDE_CLI_PATH
+    from sage_memory import CLAUDE_CLI_PATH
     if os.path.exists(CLAUDE_CLI_PATH):
         print(f"✓ Claude CLI 路径存在: {CLAUDE_CLI_PATH}")
         return True
@@ -26,7 +26,7 @@ def test_cli_path():
         return False
 
 if __name__ == "__main__":
-    print("=== 测试 claude_mem.py 注入器 ===")
+    print("=== 测试 sage_memory.py 注入器 ===")
     test_import()
     test_cli_path()
     print("\n注意：完整功能测试需要先实现 memory.py 模块")

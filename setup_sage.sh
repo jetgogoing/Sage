@@ -5,7 +5,7 @@ echo "🚀 Sage 记忆系统设置开始..."
 
 # 1. 检查Docker服务
 echo "📦 检查Docker服务..."
-cd "/Volumes/1T HDD/Sage"
+cd "/Users/jet/sage"
 docker compose ps | grep "Up" > /dev/null
 if [ $? -eq 0 ]; then
     echo "✅ PostgreSQL数据库运行正常"
@@ -47,24 +47,24 @@ fi
 
 # 4. 创建便捷脚本
 echo "📝 创建便捷使用脚本..."
-cat > sage_claude << 'EOF'
+cat > sage_cli << 'EOF'
 #!/bin/bash
 export SILICONFLOW_API_KEY="sk-xtjxdvdwjfiiggwxkojmiryhcfjliywfzurbtsorwvgkimdg"
 export CLAUDE_CLI_PATH="CLAUDE_PATH_PLACEHOLDER"
-export SAGE_HOME="/Volumes/1T HDD/Sage"
+export SAGE_HOME="/Users/jet/sage"
 cd "$SAGE_HOME"
 python3 sage_mem.py "$@"
 EOF
 
 # 替换占位符
-sed -i '' "s|CLAUDE_PATH_PLACEHOLDER|$CLAUDE_PATH|g" sage_claude
-chmod +x sage_claude
+sed -i '' "s|CLAUDE_PATH_PLACEHOLDER|$CLAUDE_PATH|g" sage_cli
+chmod +x sage_cli
 
 # 5. 创建管理脚本
 cat > sage_manage << 'EOF'
 #!/bin/bash
 export SILICONFLOW_API_KEY="sk-xtjxdvdwjfiiggwxkojmiryhcfjliywfzurbtsorwvgkimdg"
-export SAGE_HOME="/Volumes/1T HDD/Sage"
+export SAGE_HOME="/Users/jet/sage"
 cd "$SAGE_HOME"
 python3 sage_memory_cli.py "$@"
 EOF
@@ -74,7 +74,7 @@ echo ""
 echo "🎉 设置完成！使用方法："
 echo ""
 echo "1. 带记忆的Claude对话："
-echo "   ./sage_claude \"你的问题\""
+echo "   ./sage_cli \"你的问题\""
 echo ""
 echo "2. 管理记忆系统："
 echo "   ./sage_manage status          # 查看状态"
@@ -82,6 +82,6 @@ echo "   ./sage_manage search \"关键词\"  # 搜索记忆"
 echo "   ./sage_manage clear --force   # 清除记忆"
 echo ""
 echo "3. 或者设置别名到PATH中："
-echo "   export PATH=\"/Volumes/1T HDD/Sage:\$PATH\""
-echo "   echo 'alias claude=\"/Volumes/1T HDD/Sage/sage_claude\"' >> ~/.zshrc"
+echo "   export PATH=\"/Users/jet/sage:\$PATH\""
+echo "   echo 'alias claude=\"/Users/jet/sage/sage_cli\"' >> ~/.zshrc"
 echo ""

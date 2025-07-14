@@ -67,20 +67,20 @@ def test_argument_parsing():
     
     tests = [
         # 基础测试
-        ("帮助信息", ["python3", "claude_mem_v3.py", "--help"], None),
+        ("帮助信息", ["python3", "sage_minimal.py", "--help"], None),
         
         # Sage 特有参数
-        ("记忆统计", ["python3", "claude_mem_v3.py", "--memory-stats"], "记忆系统统计"),
+        ("记忆统计", ["python3", "sage_minimal.py", "--memory-stats"], "记忆系统统计"),
         
         # Claude 参数透传
-        ("模型参数", ["python3", "claude_mem_v3.py", "测试", "--model", "claude-3"], None),
-        ("温度参数", ["python3", "claude_mem_v3.py", "测试", "--temperature", "0.7"], None),
+        ("模型参数", ["python3", "sage_minimal.py", "测试", "--model", "claude-3"], None),
+        ("温度参数", ["python3", "sage_minimal.py", "测试", "--temperature", "0.7"], None),
         
         # 复杂参数组合
-        ("多参数", ["python3", "claude_mem_v3.py", "测试查询", "--model", "claude-3", "--temperature", "0.5", "--max-tokens", "100"], None),
+        ("多参数", ["python3", "sage_minimal.py", "测试查询", "--model", "claude-3", "--temperature", "0.5", "--max-tokens", "100"], None),
         
         # 无记忆模式
-        ("禁用记忆", ["python3", "claude_mem_v3.py", "--no-memory", "测试"], None),
+        ("禁用记忆", ["python3", "sage_minimal.py", "--no-memory", "测试"], None),
     ]
     
     results = []
@@ -133,7 +133,7 @@ print("警告: 这是一个警告信息", file=sys.stderr)
     try:
         result = run_test(
             "流式输出捕获",
-            ["python3", "claude_mem_v3.py", "测试流式输出"],
+            ["python3", "sage_minimal.py", "测试流式输出"],
             "Claude 响应开始"
         )
         

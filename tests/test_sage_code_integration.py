@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class ClaudeCodeIntegrationTest:
+class SageCodeIntegrationTest:
     """Claude Code集成测试类"""
     
     def __init__(self, base_url: str = "http://localhost:17800"):

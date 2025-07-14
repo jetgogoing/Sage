@@ -12,7 +12,7 @@ sys.path.insert(0, '/Volumes/1T HDD/Sage')
 
 print("1. 导入模块...")
 try:
-    from claude_mem_v3 import ImprovedCrossplatformClaude
+    from sage_minimal import ImprovedCrossplatformClaude
     print("   ✓ 导入成功")
 except Exception as e:
     print(f"   ✗ 导入失败: {e}")

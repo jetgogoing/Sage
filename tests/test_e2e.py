@@ -34,9 +34,9 @@ def test_components():
     # 2. 测试模块导入
     print("\n2. 测试模块导入...")
     try:
-        import claude_mem
+        import sage_memory
         import memory
-        print("   ✓ claude_mem.py 导入成功")
+        print("   ✓ sage_memory.py 导入成功")
         print("   ✓ memory.py 导入成功")
     except Exception as e:
         print(f"   ✗ 模块导入失败: {e}")
@@ -45,7 +45,7 @@ def test_components():
     # 3. 检查环境配置
     print("\n3. 检查环境配置...")
     from memory import SILICONFLOW_API_KEY, EMBEDDING_MODEL, LLM_MODEL
-    from claude_mem import CLAUDE_CLI_PATH
+    from sage_memory import CLAUDE_CLI_PATH
     
     configs = [
         ("API Key", SILICONFLOW_API_KEY, "sk-" in str(SILICONFLOW_API_KEY)),
@@ -69,8 +69,8 @@ def test_workflow():
     print("\n\n=== 工作流程测试 ===\n")
     
     # 1. 测试注入器执行
-    print("1. 测试 claude_mem.py 可执行性...")
-    cmd = [sys.executable, "claude_mem.py", "--version"]
+    print("1. 测试 sage_memory.py 可执行性...")
+    cmd = [sys.executable, "sage_memory.py", "--version"]
     try:
         result = subprocess.run(
             cmd, 

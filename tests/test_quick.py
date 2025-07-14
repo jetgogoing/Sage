@@ -9,7 +9,7 @@ print("=== Sage MCP 快速测试 ===\n")
 
 # 测试导入
 try:
-    import claude_mem
+    import sage_memory
     import memory
     print("✓ 模块导入成功")
 except Exception as e:
@@ -18,7 +18,7 @@ except Exception as e:
 
 # 测试配置
 from memory import SILICONFLOW_API_KEY
-from claude_mem import CLAUDE_CLI_PATH
+from sage_memory import CLAUDE_CLI_PATH
 print(f"✓ API Key 已设置: {'是' if SILICONFLOW_API_KEY else '否'}")
 print(f"✓ Claude CLI 路径: {CLAUDE_CLI_PATH}")
 
@@ -35,4 +35,4 @@ except Exception as e:
     print(f"✗ 数据库测试失败: {e}")
 
 print("\n系统就绪！")
-print("设置别名后即可使用: alias claude='python /home/jetgogoing/Sage/claude_mem.py'")
+print("设置别名后即可使用: alias claude='python /home/jetgogoing/Sage/sage_memory.py'")

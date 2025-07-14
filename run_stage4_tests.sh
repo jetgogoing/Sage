@@ -65,7 +65,7 @@ run_test "mcp_protocol" "python tests/test_mcp_protocol.py --url $MCP_SERVER_URL
 
 # 2. Claude Code集成测试
 echo -e "\n${BLUE}🤖 2. Claude Code集成测试${NC}"
-run_test "claude_code_integration" "python tests/test_claude_code_integration.py --url $MCP_SERVER_URL --output /dev/stdout"
+run_test "sage_code_integration" "python tests/test_sage_code_integration.py --url $MCP_SERVER_URL --output /dev/stdout"
 
 # 3. 工具发现和执行测试
 echo -e "\n${BLUE}🛠️ 3. 工具发现和执行测试${NC}"

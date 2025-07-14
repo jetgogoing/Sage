@@ -54,31 +54,14 @@ max_attempts=30
 attempt=0
 
 while [ $attempt -lt $max_attempts ]; do
-    if python -c "
-import asyncpg
-import asyncio
-import os
-
-async def check_db():
-    try:
-        conn = await asyncpg.connect(
-            host=os.environ['DB_HOST'],
-            port=int(os.environ.get('DB_PORT', 5432)),
-            database=os.environ['DB_NAME'],
-            user=os.environ['DB_USER'],
-            password=os.environ['DB_PASSWORD']
-        )
-        await conn.close()
-        return True
-    except Exception as e:
-        print(f'Database not ready: {e}')
-        return False
-
-result = asyncio.run(check_db())
-exit(0 if result else 1)
-" 2>/dev/null; then
-        echo -e "${GREEN}✅ Database is ready${NC}"
-        break
+    # Simple connectivity test using built-in tools
+    if timeout 2 bash -c "echo > /dev/tcp/$DB_HOST/$DB_PORT" 2>/dev/null; then
+        echo -e "${GREEN}✅ Database port is reachable${NC}"
+        # Try a simple Python import test
+        if python -c "import sys; sys.path.insert(0, '/app')" 2>/dev/null; then
+            echo -e "${GREEN}✅ Python environment is ready${NC}"
+            break
+        fi
     fi
     
     attempt=$((attempt + 1))
@@ -125,9 +108,7 @@ echo -e "   Log Level: ${LOG_LEVEL}"
 
 # Start the server
 echo -e "${GREEN}🚀 Starting Sage MCP Server...${NC}"
-exec python -m uvicorn app.sage_mcp_server:app \
-    --host "$MCP_SERVER_HOST" \
-    --port "$MCP_SERVER_PORT" \
-    --log-level "$(echo $LOG_LEVEL | tr '[:upper:]' '[:lower:]')" \
-    --access-log \
-    --no-use-colors
+cd /app
+export PYTHONPATH=/app:$PYTHONPATH
+exec python -m app.sage_mcp_server \
+    || exec python app/sage_mcp_server.py

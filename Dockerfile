@@ -59,5 +59,8 @@ EXPOSE 17800
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 --start-period=40s \
     CMD curl -f http://localhost:17800/health || exit 1
 
+# 切换到root用户运行（因为pip packages安装在/root/.local）
+USER root
+
 # 使用entrypoint脚本启动
 ENTRYPOINT ["/docker-entrypoint.sh"]

@@ -46,7 +46,7 @@ mkdir -p ~/.config/claude
 ```bash
 #!/bin/bash
 # 确保 Sage MCP 服务器运行
-cd "/Volumes/1T HDD/Sage"
+cd "/Users/jet/sage"
 python3 app/sage_mcp_server.py &
 SAGE_PID=$!
 
@@ -102,7 +102,7 @@ curl -X POST http://localhost:17800/mcp \
 
 ### 自动注入配置
 
-修改 `/Volumes/1T HDD/Sage/app/sage_mcp_interceptor.py` 中的配置：
+修改 `/Users/jet/sage/app/sage_mcp_interceptor.py` 中的配置：
 ```python
 GLOBAL_AUTO_INJECTION_CONFIG = {
     "enabled": True,

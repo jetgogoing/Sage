@@ -19,7 +19,7 @@
 ### 1.1 核心任务
 
 #### 任务 A：修改参数解析逻辑
-**文件**：`claude_mem_crossplatform.py`
+**文件**：`sage_crossplatform.py`
 
 ```python
 def parse_claude_arguments_v2(self, args: List[str]) -> Tuple[str, List[str], Dict[str, Any]]:
@@ -79,7 +79,7 @@ def parse_claude_arguments_v2(self, args: List[str]) -> Tuple[str, List[str], Di
 ```
 
 #### 任务 B：实现响应捕获机制
-**文件**：`claude_mem_crossplatform.py`
+**文件**：`sage_crossplatform.py`
 
 ```python
 def execute_with_capture(self, claude_path: str, user_prompt: str, claude_args: List[str]) -> Tuple[int, str]:
@@ -341,7 +341,7 @@ def format_context_for_prompt(contexts: List[Dict[str, Any]], max_tokens: int = 
 ```
 
 #### 任务 B：实现提示增强逻辑
-**文件**：`claude_mem_crossplatform.py`
+**文件**：`sage_crossplatform.py`
 
 ```python
 def build_enhanced_prompt(self, user_prompt: str, config: Dict[str, Any]) -> str:
@@ -468,7 +468,7 @@ memory_cache = MemoryCache(ttl_seconds=300)  # 5分钟缓存
 ```
 
 #### 任务 B：异步保存实现
-**文件**：`claude_mem_crossplatform.py`
+**文件**：`sage_crossplatform.py`
 
 ```python
 import concurrent.futures
@@ -819,7 +819,7 @@ if __name__ == '__main__':
 ### 3.2 用户体验增强
 
 #### 任务 A：添加视觉反馈
-**文件**：`claude_mem_crossplatform.py`
+**文件**：`sage_crossplatform.py`
 
 ```python
 def print_memory_status(self, contexts_found: int, memory_enabled: bool):

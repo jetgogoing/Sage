@@ -22,7 +22,7 @@ from platform_utils import (
     PlatformInfo, CommandParser, PathHandler, 
     ProcessLauncher, EncodingHandler
 )
-from claude_mem_v3 import ImprovedCrossplatformClaude
+from sage_minimal import ImprovedCrossplatformClaude
 
 
 class TestPlatformInfo(unittest.TestCase):
@@ -290,7 +290,7 @@ print("Args:", ' '.join(sys.argv[1:]))
             os.environ['ORIGINAL_CLAUDE_PATH'] = f'python3 "{mock_script}"'
             
             # 解析参数
-            from claude_mem_v3 import ParsedArgs
+            from sage_minimal import ParsedArgs
             parsed_args = ParsedArgs(
                 user_prompt="Test prompt",
                 claude_args=["--verbose"],

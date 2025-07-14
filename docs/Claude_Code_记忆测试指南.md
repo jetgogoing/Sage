@@ -12,7 +12,7 @@
 
 ### 1.1 进入项目目录
 ```bash
-cd "/Volumes/1T HDD/Sage"
+cd "/Users/jet/sage"
 ```
 
 ### 1.2 检查项目结构
@@ -368,7 +368,7 @@ echo "=== 状态检查完成 ==="
 如果遇到问题，可以查看相关日志：
 ```bash
 # 查看MCP服务器实时日志
-tail -f /Volumes/1T HDD/Sage/app/sage_mcp_server.log
+tail -f /Users/jet/sage/app/sage_mcp_server.log
 
 # 查看数据库日志
 docker-compose logs postgres
@@ -390,7 +390,7 @@ echo "Docker版本: $(docker --version)"
 echo "Claude Code版本: $(claude --version)"
 
 echo -e "\n2. 项目文件检查..."
-ls -la /Volumes/1T\ HDD/Sage/
+ls -la /Users/jet/sage/
 
 echo -e "\n3. Docker容器状态..."
 docker-compose ps

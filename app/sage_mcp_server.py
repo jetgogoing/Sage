@@ -22,7 +22,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -482,7 +482,7 @@ async def timeout_middleware(request: Request, call_next):
 class MCPRequest(BaseModel):
     """Standard MCP request format"""
     jsonrpc: str = "2.0"
-    id: Optional[str] = None
+    id: Optional[Union[str, int]] = None
     method: str
     params: Optional[Dict[str, Any]] = None
 
@@ -555,8 +555,15 @@ async def handle_mcp_request(request: MCPRequest):
         
         elif request.method == "initialize":
             # MCP initialization with full capability information and auto-injection
+            # Support multiple protocol versions
+            client_version = request.params.get("protocolVersion", "2024-11-05") if request.params else "2024-11-05"
+            supported_versions = ["2024-11-05", "2025-06-18"]
+            
+            # Use client version if supported, otherwise fall back to default
+            protocol_version = client_version if client_version in supported_versions else "2024-11-05"
+            
             init_result = {
-                    "protocolVersion": "2024-11-05",
+                    "protocolVersion": protocol_version,
                     "capabilities": {
                         "tools": {
                             "supports_retry": True,

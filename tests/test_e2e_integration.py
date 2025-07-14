@@ -56,7 +56,7 @@ class TestE2EIntegration:
         """测试完整对话工作流程"""
         # 1. 第一轮对话 - 建立基础上下文
         result1 = subprocess.run(
-            ['python', 'claude_mem_v3.py', '什么是Python装饰器？'],
+            ['python', 'sage_minimal.py', '什么是Python装饰器？'],
             capture_output=True,
             text=True,
             cwd=Path(__file__).parent.parent
@@ -75,7 +75,7 @@ class TestE2EIntegration:
         
         # 3. 第二轮对话 - 测试上下文检索
         result2 = subprocess.run(
-            ['python', 'claude_mem_v3.py', '能给个装饰器的例子吗？'],
+            ['python', 'sage_minimal.py', '能给个装饰器的例子吗？'],
             capture_output=True,
             text=True,
             cwd=Path(__file__).parent.parent
@@ -92,13 +92,13 @@ class TestE2EIntegration:
         """测试参数透传功能"""
         test_cases = [
             # 基础查询
-            ['python', 'claude_mem_v3.py', '生成一个简单的JSON'],
+            ['python', 'sage_minimal.py', '生成一个简单的JSON'],
             
             # 带参数查询
-            ['python', 'claude_mem_v3.py', '写一个函数', '--no-memory'],
+            ['python', 'sage_minimal.py', '写一个函数', '--no-memory'],
             
             # 复杂参数
-            ['python', 'claude_mem_v3.py', '解释这段代码', '--verbose']
+            ['python', 'sage_minimal.py', '解释这段代码', '--verbose']
         ]
         
         for cmd in test_cases:
@@ -157,7 +157,7 @@ class TestE2EIntegration:
             """在线程中运行命令"""
             try:
                 result = subprocess.run(
-                    ['python', 'claude_mem_v3.py', query],
+                    ['python', 'sage_minimal.py', query],
                     capture_output=True,
                     text=True,
                     cwd=base_dir,
@@ -200,7 +200,7 @@ class TestE2EIntegration:
         
         # 1. 测试无效命令恢复
         result = subprocess.run(
-            ['python', 'claude_mem_v3.py', '--invalid-option'],
+            ['python', 'sage_minimal.py', '--invalid-option'],
             capture_output=True,
             text=True,
             cwd=base_dir
@@ -210,7 +210,7 @@ class TestE2EIntegration:
         
         # 2. 测试空查询处理
         result = subprocess.run(
-            ['python', 'claude_mem_v3.py', ''],
+            ['python', 'sage_minimal.py', ''],
             capture_output=True,
             text=True,
             cwd=base_dir
@@ -225,7 +225,7 @@ class TestE2EIntegration:
         # 1. 添加一条记忆
         unique_marker = f"测试标记_{int(time.time())}"
         result = subprocess.run(
-            ['python', 'claude_mem_v3.py', f'记住这个特殊标记：{unique_marker}'],
+            ['python', 'sage_minimal.py', f'记住这个特殊标记：{unique_marker}'],
             capture_output=True,
             text=True,
             cwd=base_dir
@@ -320,7 +320,7 @@ class TestEdgeCases:
         
         # 应该能正常工作
         result = subprocess.run(
-            ['python', 'claude_mem_v3.py', '你好'],
+            ['python', 'sage_minimal.py', '你好'],
             capture_output=True,
             text=True,
             cwd=base_dir
@@ -335,7 +335,7 @@ class TestEdgeCases:
         long_input = "请分析这段文字：" + "测试" * 500
         
         result = subprocess.run(
-            ['python', 'claude_mem_v3.py', long_input],
+            ['python', 'sage_minimal.py', long_input],
             capture_output=True,
             text=True,
             cwd=base_dir
@@ -358,7 +358,7 @@ class TestEdgeCases:
         for input_text in special_inputs:
             print(f"\n测试输入: {repr(input_text)}")
             result = subprocess.run(
-                ['python', 'claude_mem_v3.py', input_text],
+                ['python', 'sage_minimal.py', input_text],
                 capture_output=True,
                 text=True,
                 cwd=base_dir
