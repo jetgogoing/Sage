@@ -39,7 +39,7 @@ COPY --chown=sage:sage sage_mcp_stdio_single.py /app/
 
 # Copy initialization scripts  
 COPY docker/single/init-db-minimal.sql /docker-entrypoint-initdb.d/
-COPY docker/single/entrypoint-minimal.sh /entrypoint.sh
+COPY docker/single/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Environment variables

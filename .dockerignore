@@ -1,54 +1,76 @@
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+*.pyo
+*.pyd
 .Python
-env/
 venv/
+.venv/
+env/
 ENV/
-.venv
-pip-log.txt
-pip-delete-this-directory.txt
 .pytest_cache/
+.coverage
 *.egg-info/
+dist/
+build/
 
-# Project specific
+# Database
+db/
+pgdata/
+*.db
+*.sqlite
+*.sqlite3
+postgres-data/
+
+# Logs and temporary
 *.log
 logs/
 tmp/
-*.db
-*.sqlite3
-pgdata/
+temp/
+cache/
+.cache/
+
+# Documentation (keep only essential)
+docs/执行报告/
+tests/
+*.md
+!README.md
+!README_DOCKER_SINGLE.md
+
+# Environment and IDE
 .env
 .env.local
-
-# IDE
+.env.*.local
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
-Thumbs.db
 
 # Git
 .git/
 .gitignore
+.gitattributes
 
 # Docker
-Dockerfile
-docker-compose.yml
 .dockerignore
+docker-compose.override.yml
+*.tar
+*.tar.gz
 
-# Tests
-tests/
-test_*.py
-*_test.py
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
 
-# Documentation
-docs/
-README.md
-*.md
+# Backup files
+*.bak
+*.backup
+*.old
+backup/
+
+# Development scripts (not needed in container)
+test-*.sh
+debug-*.py
+fix-*.py

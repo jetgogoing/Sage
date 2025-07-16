@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "sage": {
+      "command": "bash",
+      "args": ["/Users/jet/sage/run_sage_ubuntu.sh"],
+      "env": {
+        "SILICONFLOW_API_KEY": "${SILICONFLOW_API_KEY}",
+        "SAGE_LOG_LEVEL": "INFO"
+      }
+    }
+  }
+}

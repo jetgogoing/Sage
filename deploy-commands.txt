@@ -1,0 +1,38 @@
+# Sage MCP 完整部署命令
+
+# 1. 使脚本可执行
+chmod +x complete-deployment.sh run_sage_ubuntu.sh
+
+# 2. 运行完整部署（会自动构建、测试、配置）
+./complete-deployment.sh
+
+# 如果上面的脚本有权限问题，使用：
+bash complete-deployment.sh
+
+# ==========================================
+# 或者手动逐步执行：
+# ==========================================
+
+# 1. 构建镜像
+docker build -f Dockerfile.ubuntu.fixed -t sage-mcp:ubuntu .
+
+# 2. 测试运行
+docker run -it --rm \
+    -e SILICONFLOW_API_KEY="${SILICONFLOW_API_KEY}" \
+    sage-mcp:ubuntu
+
+# 3. 如果启动失败，进入调试模式
+docker run -it --rm \
+    -e SILICONFLOW_API_KEY="${SILICONFLOW_API_KEY}" \
+    sage-mcp:ubuntu bash
+
+# 在容器内手动调试：
+# - 检查 PostgreSQL: pg_isready -h localhost -p 5432
+# - 查看日志: cat /var/log/sage/postgresql.log
+# - 手动启动: su - postgres -c "/usr/lib/postgresql/15/bin/pg_ctl -D /var/lib/postgresql/data start"
+
+# 4. 注册到 Claude Code
+claude mcp add sage ./run_sage_ubuntu.sh
+
+# 5. 验证
+claude mcp list

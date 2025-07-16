@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Sage MCP Single Container Launch Script
 # For Unix/Linux/macOS
+set -e
 
 # Default image name
-IMAGE_NAME="${SAGE_IMAGE:-sage-mcp-single:latest}"
+IMAGE_NAME="${SAGE_IMAGE:-sage-mcp-single:minimal}"
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
@@ -17,11 +18,15 @@ if ! docker info &> /dev/null; then
     exit 1
 fi
 
-# Run the container
+# Create volume for data persistence if it doesn't exist
+docker volume create sage-mcp-data 2>/dev/null || true
+
+# Run the container with data persistence
 # -i: Keep STDIN open (required for MCP STDIO)
-# --rm: Remove container after exit
-# Optional: Add -v for data persistence
+# --rm: Remove container after exit (data persists in volume)
+# -v: Mount volume for PostgreSQL data persistence
 exec docker run --rm -i \
     --name sage-mcp-stdio \
+    -v sage-mcp-data:/var/lib/postgresql/data \
     $SAGE_DOCKER_OPTS \
     "$IMAGE_NAME"

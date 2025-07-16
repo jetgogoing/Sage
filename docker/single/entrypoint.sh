@@ -1,54 +1,72 @@
 #!/bin/bash
 set -e
 
-# Function to log messages to stderr (won't interfere with STDIO)
+# Simple logging to stderr
 log() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1" >&2
+    >&2 echo "[$(date '+%H:%M:%S')] $1"
 }
 
-# Ensure log directory exists with correct permissions
-mkdir -p /var/log/sage
-chown -R postgres:postgres /var/log/sage
+# Fix permissions
+chown -R postgres:postgres /var/lib/postgresql /run/postgresql 2>/dev/null || true
+chown -R sage:sage /var/log/sage 2>/dev/null || true
 
 # Initialize PostgreSQL if needed
-if [ ! -s "$PGDATA/PG_VERSION" ]; then
-    log "Initializing PostgreSQL database..."
-    su - postgres -c "/usr/lib/postgresql/16/bin/initdb -D $PGDATA"
+if [ ! -f "$PGDATA/PG_VERSION" ]; then
+    log "Initializing PostgreSQL..."
+    su-exec postgres initdb -D "$PGDATA" --auth-local=trust --auth-host=trust
+    
+    # Simple config
+    cat >> "$PGDATA/postgresql.conf" <<EOF
+listen_addresses = 'localhost'
+logging_collector = off
+log_destination = 'stderr'
+EOF
 fi
 
 # Start PostgreSQL
 log "Starting PostgreSQL..."
-su - postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D $PGDATA -l /var/log/sage/postgresql.log start"
+su-exec postgres postgres -D "$PGDATA" &
+PGPID=$!
 
-# Wait for PostgreSQL to be ready
-log "Waiting for PostgreSQL to be ready..."
-for i in {1..30}; do
-    if pg_isready -h localhost -p 5432 -U postgres >/dev/null 2>&2; then
+# Wait for PostgreSQL with exponential backoff
+log "Waiting for PostgreSQL..."
+MAX_ATTEMPTS=30
+attempt=0
+wait_time=1
+
+while [ $attempt -lt $MAX_ATTEMPTS ]; do
+    if su-exec postgres pg_isready -q -h localhost -p 5432; then
         log "PostgreSQL is ready"
         break
     fi
-    sleep 1
+    
+    attempt=$((attempt + 1))
+    if [ $attempt -eq $MAX_ATTEMPTS ]; then
+        log "ERROR: PostgreSQL failed to start after $MAX_ATTEMPTS attempts"
+        kill $PGPID 2>/dev/null || true
+        exit 1
+    fi
+    
+    log "PostgreSQL not ready, attempt $attempt/$MAX_ATTEMPTS, waiting ${wait_time}s..."
+    sleep $wait_time
+    
+    # Exponential backoff with max 5s
+    if [ $wait_time -lt 5 ]; then
+        wait_time=$((wait_time * 2))
+    fi
 done
 
-# Run initialization script if database doesn't exist
-if ! su - postgres -c "psql -lqt" | cut -d \| -f 1 | grep -qw sage; then
-    log "Running database initialization..."
-    su - postgres -c "psql -f /docker-entrypoint-initdb.d/init-db.sql"
+# Initialize database
+if ! su-exec postgres psql -lqt | grep -q sage; then
+    log "Creating database..."
+    su-exec postgres createuser -s sage 2>/dev/null || true
+    su-exec postgres createdb -O sage sage 2>/dev/null || true
 fi
 
-# Ensure log directory exists and has correct permissions
-mkdir -p /var/log/sage
+# Prepare log file
 touch /var/log/sage/sage_mcp_stdio.log
 chown sage:sage /var/log/sage/sage_mcp_stdio.log
 
-# Export environment variables for the application
-export SAGE_DB_HOST=localhost
-export SAGE_DB_PORT=5432
-export SAGE_DB_NAME=sage
-export SAGE_DB_USER=sage
-export SAGE_DB_PASSWORD=sage
-
-# Start the STDIO service
-# All logs go to files, keeping STDIO clean for MCP protocol
-log "Starting Sage MCP STDIO service..."
-exec su - sage -c "cd /app && python /app/sage_mcp_stdio_single.py"
+# Start Sage MCP
+log "Starting Sage MCP..."
+exec su-exec sage python /app/sage_mcp_stdio_single.py

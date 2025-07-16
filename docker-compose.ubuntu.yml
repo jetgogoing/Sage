@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  sage-mcp-ubuntu:
+    build:
+      context: .
+      dockerfile: Dockerfile.ubuntu
+    image: sage-mcp:ubuntu
+    container_name: sage-mcp-ubuntu
+    environment:
+      # API 密钥（必需）
+      - SILICONFLOW_API_KEY=${SILICONFLOW_API_KEY}
+      
+      # 数据库配置
+      - DB_HOST=localhost
+      - DB_PORT=5432
+      - DB_NAME=sage
+      - DB_USER=sage
+      - DB_PASSWORD=sage
+      
+      # Sage 配置
+      - SAGE_ENV=production
+      - SAGE_LOG_LEVEL=${SAGE_LOG_LEVEL:-INFO}
+      - SAGE_MAX_RESULTS=${SAGE_MAX_RESULTS:-5}
+      - SAGE_ENABLE_RERANK=${SAGE_ENABLE_RERANK:-true}
+      - SAGE_ENABLE_SUMMARY=${SAGE_ENABLE_SUMMARY:-true}
+      - SAGE_CACHE_SIZE=${SAGE_CACHE_SIZE:-500}
+      - SAGE_CACHE_TTL=${SAGE_CACHE_TTL:-300}
+      
+      # Python 配置
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      
+    volumes:
+      # 数据持久化
+      - sage_data:/var/lib/postgresql/data
+      - sage_logs:/var/log/sage
+      
+    stdin_open: true
+    tty: false
+    
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5432"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+      
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  sage_data:
+    driver: local
+  sage_logs:
+    driver: local

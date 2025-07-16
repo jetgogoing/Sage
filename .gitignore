@@ -1,33 +1,67 @@
-# 文档目录（包含执行报告和敏感信息）
-docs/
-!docs/usage-guide.md
-!docs/api-reference.md
-!docs/deployment-guide.md
-
-# 根目录文件（除README.md外全部忽略）
-# /*.py  # 现在允许提交根目录的Python文件
-# /*.sh  # 现在允许提交Shell脚本
-/*.bat
-/*.ps1
-/*.json
-/*.txt
-/*.md
-!README.md
-/*.yaml
-/*.yml
-/*.toml
-/*.ini
-/*.cfg
-/*.conf
-
-# 数据库和聊天记录（敏感数据）
+# 数据库
+db/
 pgdata/
+postgres-data/
 *.db
 *.sqlite
 *.sqlite3
-conversation_*.json
-chat_*.json
-memory_*.json
+
+# 日志
+*.log
+logs/
+
+# 临时文件
+tmp/
+temp/
+cache/
+.cache/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.venv/
+env/
+ENV/
+
+# 环境配置
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 构建产物
+*.tar
+*.tar.gz
+dist/
+build/
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 测试覆盖率
+.coverage
+htmlcov/
+.pytest_cache/
+
+# 备份文件
+*.bak
+*.backup
+*.old
+backup/
 
 # 环境配置文件
 .env

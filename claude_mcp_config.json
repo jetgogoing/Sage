@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "sage": {
+      "command": "/Users/jet/sage/start_sage_mcp_stdio.sh",
+      "args": [],
+      "env": {}
+    }
+  }
+}

@@ -53,7 +53,7 @@ fi
 # Build the Docker image
 print_status "Building Docker image..."
 docker build \
-    -f Dockerfile.single \
+    -f Dockerfile.single.minimal \
     -t "$IMAGE_NAME" \
     --build-arg BUILDKIT_INLINE_CACHE=1 \
     "$BUILD_CONTEXT"
