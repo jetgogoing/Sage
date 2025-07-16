@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?logo=docker&logoColor=white)](https://www.docker.com/)
-[![Version](https://img.shields.io/badge/version-1.0.0-green.svg)](https://github.com/jetgogoing/Sage/releases)
+[![Version](https://img.shields.io/badge/version-1.1.0-green.svg)](https://github.com/jetgogoing/Sage/releases)
 
 **🧠 让 Claude 成为真正的 Sage - 一个拥有永恒记忆的数字哲人**
 
@@ -70,9 +70,9 @@ Sage MCP 是一个为 Claude Code 设计的企业级记忆系统，通过 Model 
 ## 🚀 快速开始
 
 ### 前置要求
-- Python 3.8+
 - Docker & Docker Compose
 - [SiliconFlow API Key](https://siliconflow.cn) (用于向量嵌入)
+- Claude Code 最新版本
 
 ### 1. 克隆项目
 ```bash
@@ -91,29 +91,58 @@ cp .env.example .env
 
 ### 3. 启动服务
 ```bash
-# 使用 Docker Compose 启动所有服务
+# 使用 Docker Compose 启动服务（stdio 模式）
 docker-compose up -d
 
 # 验证服务状态
-curl http://localhost:17800/health
+docker ps | grep sage-mcp
 ```
 
 ### 4. 在 Claude Code 中使用
 
-1. 打开 Claude Code 设置
-2. 添加 MCP 服务器配置：
+方式一：**Docker 部署（推荐）**
+
+1. 确保 Docker 容器正在运行：
+```bash
+docker ps | grep sage-mcp
+```
+
+2. 在 Claude Code 设置中添加 MCP 服务器配置：
 ```json
 {
   "mcpServers": {
     "sage": {
-      "type": "http",
-      "url": "http://localhost:17800/mcp"
+      "type": "stdio",
+      "command": "docker",
+      "args": ["exec", "-i", "sage-mcp", "python", "-u", "/app/sage_mcp_stdio_single.py"]
     }
   }
 }
 ```
 
-3. 重启 Claude Code，开始使用！
+方式二：**本地运行（开发模式）**
+
+如果你想直接运行而不使用 Docker，可以使用项目根目录的 `.mcp.json` 配置文件：
+```json
+{
+  "mcpServers": {
+    "sage": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["/path/to/sage/sage_mcp_stdio_single.py"],
+      "env": {
+        "SAGE_DB_HOST": "localhost",
+        "SAGE_DB_PORT": "5432",
+        "SAGE_DB_NAME": "sage_memory",
+        "SAGE_DB_USER": "sage",
+        "SAGE_DB_PASSWORD": "sage"
+      }
+    }
+  }
+}
+```
+
+3. 重启 Claude Code，Sage 会自动加载！
 
 ## 📖 使用指南
 
@@ -133,15 +162,12 @@ curl http://localhost:17800/health
 
 ### 记忆管理工具
 
-```bash
-# 查看记忆统计
-curl http://localhost:17800/mcp \
-  -d '{"method":"tools/call","params":{"name":"get_memory_stats"}}'
+Sage 通过 MCP 协议提供了完整的记忆管理功能，所有操作都在 Claude Code 中通过自然语言完成：
 
-# 搜索特定记忆
-curl http://localhost:17800/mcp \
-  -d '{"method":"tools/call","params":{"name":"search_memory","arguments":{"query":"二叉树"}}}'
-```
+- **保存对话**：当前对话会自动保存到记忆系统
+- **搜索记忆**：Sage 会自动搜索相关历史对话并注入上下文
+- **管理会话**：支持创建、切换和查看不同会话
+- **分析记忆**：生成记忆洞察和使用模式分析
 
 ### 高级配置
 
@@ -164,50 +190,56 @@ SAGE_CACHE_TTL=300          # 缓存过期时间（秒）
 
 | 组件 | 技术选型 | 说明 |
 |------|----------|------|
-| **协议层** | MCP over HTTP | Model Context Protocol 标准实现 |
-| **API框架** | FastAPI + Uvicorn | 高性能异步Web框架 |
-| **向量数据库** | PostgreSQL + pgvector | 支持4096维向量存储和检索 |
-| **嵌入模型** | Qwen3-Embedding-8B | 通过 SiliconFlow API 调用 |
-| **重排序模型** | Qwen3-Reranker-8B | 神经网络精排序 |
+| **协议层** | MCP over stdio | Model Context Protocol 标准实现 |
+| **通信方式** | JSON-RPC 2.0 | 通过标准输入输出通信 |
+| **向量数据库** | PostgreSQL + pgvector | 内置于容器，支持4096维向量 |
+| **嵌入模型** | Qwen2.5-Coder-3B | 通过 SiliconFlow API 调用 |
+| **重排序模型** | Qwen2-VL-2B-Reranker | 神经网络精排序 |
 | **压缩模型** | DeepSeek-V2.5 | 智能上下文摘要 |
-| **容器化** | Docker Compose | 一键部署所有组件 |
+| **容器化** | Docker 单容器 | 所有组件集成在一个容器中 |
 
 ### 核心工作流
 
 ```mermaid
 graph LR
     A[用户输入] --> B[Claude Code]
-    B --> C{MCP请求}
-    C --> D[Sage服务器]
-    D --> E[智能检索]
-    E --> F[向量搜索]
-    E --> G[多维评分]
-    E --> H[神经重排]
-    F --> I[上下文融合]
-    G --> I
-    H --> I
-    I --> J[返回Claude]
-    J --> K[生成回答]
-    K --> L[自动保存]
-    L --> D
+    B --> C{stdio通信}
+    C --> D[Docker容器]
+    D --> E[Sage MCP服务]
+    E --> F[智能检索]
+    F --> G[向量搜索]
+    F --> H[多维评分]
+    F --> I[神经重排]
+    G --> J[上下文融合]
+    H --> J
+    I --> J
+    J --> K[JSON-RPC响应]
+    K --> B
+    B --> L[生成回答]
+    L --> M[自动保存]
+    M --> E
 ```
 
 ### 项目结构
 
 ```
 Sage/
-├── app/
-│   ├── sage_mcp_server.py      # MCP服务器主程序
-│   ├── sage_mcp_auto_context.py # 自动上下文注入
-│   ├── sage_mcp_interceptor.py  # 请求拦截器
-│   └── memory_adapter_v2.py     # 增强记忆适配器
-├── intelligent_retrieval.py      # 智能检索引擎
-├── reranker_qwen.py             # 神经网络重排序
-├── memory.py                    # 核心记忆实现
-├── docker-compose.yml           # 容器编排配置
-└── docs/                        # 详细文档
-    ├── 执行报告/                # 各阶段开发报告
-    └── *.md                     # 架构和使用文档
+├── sage_mcp_stdio_single.py     # stdio 版本主程序
+├── sage_core/                   # 核心功能模块
+│   ├── memory/                  # 记忆管理
+│   │   ├── storage.py          # 存储接口
+│   │   └── retrieval.py        # 检索功能
+│   ├── embedding/              # 向量嵌入
+│   │   └── siliconflow.py      # SiliconFlow API
+│   └── database/               # 数据库管理
+│       └── connection.py       # 连接池管理
+├── docker/                     # Docker 相关文件
+│   └── single/                 # 单容器版本
+│       ├── Dockerfile.single.minimal
+│       └── entrypoint.sh       # 启动脚本
+├── docker-compose.yml          # 容器编排配置
+└── docs/                       # 详细文档
+    └── 执行报告/               # 开发报告
 ```
 
 ## 🔬 技术亮点
@@ -394,12 +426,11 @@ docker exec sage-mcp python -c "from app.maintenance import optimize; optimize()
 #### 问题：Claude Code 无法连接到 Sage
 ```bash
 # 1. 检查服务状态
-docker ps | grep sage
-curl http://localhost:17800/health
-
-# 2. 查看日志
+docker ps | grep sage-mcp
 docker logs sage-mcp
-tail -f /tmp/sage_mcp_v4_final.log
+
+# 2. 测试 stdio 通信
+docker exec -i sage-mcp python /app/sage_mcp_stdio_single.py <<< '{"jsonrpc":"2.0","method":"initialize","id":1}'
 
 # 3. 重启服务
 docker-compose restart
@@ -532,10 +563,16 @@ done
 
 ## 📋 更新日志
 
+### v1.1.0 (2025-01-16) - stdio 版本发布
+- 🎯 切换到 MCP stdio 协议，更加稳定可靠
+- 📦 单容器架构，所有组件集成在一个 Docker 容器中
+- ⚡ 简化部署流程，一个命令启动全部服务
+- 🔧 优化数据库连接管理
+
 ### v1.0.0 (2025-01-15) - 工作版本发布
 - ✨ 完整的哲学理念融入
 - 📚 全面的使用指南和技巧
-- 🛡️ 企业级稳定性保证
+- 🛡️ 企业级稱定性保证
 - 🚀 生产环境就绪
 
 ### v0.9.5 (2025-01-14) - 五阶段开发完成
