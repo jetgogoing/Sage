@@ -146,3 +146,6 @@ fix_*.py
 debug_*.py
 # test_*.py  # 允许测试文件
 migrate.pyclaude-search-mcp/
+
+# 文档文件夹
+docs/

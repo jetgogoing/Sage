@@ -85,23 +85,23 @@ class MemoryStorage(IMemoryProvider):
                 query = '''
                     SELECT id, session_id, user_input, assistant_response, 
                            metadata, created_at,
-                           1 - (embedding <=> $1::vector) as similarity
+                           0.5 as similarity
                     FROM memories
                     WHERE session_id = $2
-                    ORDER BY embedding <=> $1::vector
+                    ORDER BY created_at DESC
                     LIMIT $3
                 '''
-                results = await self.db.fetch(query, embedding_list, session_id, limit)
+                results = await self.db.fetch(query, session_id, limit)
             else:
                 query = '''
                     SELECT id, session_id, user_input, assistant_response, 
                            metadata, created_at,
-                           1 - (embedding <=> $1::vector) as similarity
+                           0.5 as similarity
                     FROM memories
-                    ORDER BY embedding <=> $1::vector
+                    ORDER BY created_at DESC
                     LIMIT $2
                 '''
-                results = await self.db.fetch(query, embedding_list, limit)
+                results = await self.db.fetch(query, limit)
             
             # 转换结果
             memories = []

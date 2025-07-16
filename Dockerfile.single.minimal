@@ -1,68 +1,38 @@
-# Sage MCP Single Container - Cloud API Version (<300MB)
-# Uses SiliconFlow API for embeddings (4096 dimensions)
+# Sage MCP Single Container - Minimal Edition
+# Based on python:3.10-slim for smallest size
+FROM python:3.10-slim
 
-FROM python:3.10-alpine
+# Install PostgreSQL and required system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    postgresql-15 \
+    postgresql-contrib-15 \
+    postgresql-client-15 \
+    curl \
+    ca-certificates \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install runtime dependencies only
-RUN apk add --no-cache \
-    postgresql15 \
-    postgresql15-client \
-    postgresql15-contrib \
-    bash \
-    su-exec \
-    build-base \
-    postgresql15-dev \
-    && rm -rf /var/cache/apk/*
-
-# Create directories and users
-RUN adduser -D -s /bin/bash sage \
-    && mkdir -p /run/postgresql /var/log/sage /var/lib/sage /var/lib/postgresql/data \
-    && chown -R postgres:postgres /run/postgresql /var/lib/postgresql \
-    && chown -R sage:sage /var/log/sage /var/lib/sage
-
-# Install minimal Python dependencies (cloud API version)
+# Create app directory
 WORKDIR /app
-RUN pip install --no-cache-dir \
-    mcp>=1.1.0 \
-    asyncpg>=0.29.0 \
-    pgvector>=0.2.5 \
-    requests>=2.31.0 \
-    numpy>=1.24.0 \
-    PyJWT>=2.8.0 \
-    python-dotenv>=1.0.0 \
-    aiofiles>=23.2.1 \
-    && rm -rf ~/.cache/pip
 
-# Copy application code
-COPY --chown=sage:sage sage_core /app/sage_core
-COPY --chown=sage:sage sage_mcp_stdio_single.py /app/
+# Copy database initialization script
+COPY docker/single/init.sql /docker-entrypoint-initdb.d/
 
-# Copy initialization scripts  
-COPY docker/single/init-db-minimal.sql /docker-entrypoint-initdb.d/
+# Copy core application files
+COPY ./sage_core /app/sage_core
+COPY ./sage_mcp_stdio_single.py /app/
+COPY ./requirements.txt /app/
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy and set up entrypoint script
 COPY docker/single/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Environment variables
-ENV PGDATA=/var/lib/postgresql/data \
-    PATH="/usr/libexec/postgresql15:$PATH" \
-    SAGE_DB_HOST=localhost \
-    SAGE_DB_PORT=5432 \
-    SAGE_DB_NAME=sage \
-    SAGE_DB_USER=sage \
-    SAGE_DB_PASSWORD=sage \
-    SAGE_LOG_DIR=/var/log/sage \
-    SAGE_USE_CLOUD_API=true \
-    PYTHONUNBUFFERED=1 \
-    LANG=C.UTF-8
+# PostgreSQL data directory
+ENV PGDATA=/var/lib/postgresql/data
 
-# Configure PostgreSQL for minimal setup
-RUN echo "#!/bin/sh" > /usr/local/bin/pg_isready \
-    && echo 'su-exec postgres /usr/bin/pg_isready "$@"' >> /usr/local/bin/pg_isready \
-    && chmod +x /usr/local/bin/pg_isready
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=45s --retries=3 \
-    CMD pg_isready -h localhost -p 5432 || exit 1
-
-# Entry point
+# MCP requires STDIO communication
 ENTRYPOINT ["/entrypoint.sh"]
