@@ -1,0 +1,83 @@
+# Sage MCP Single Container Dockerfile
+# Combines PostgreSQL + pgvector + Sage MCP STDIO service
+
+FROM python:3.10-slim AS base
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    # Add PostgreSQL APT repository
+    wget \
+    ca-certificates \
+    lsb-release \
+    gnupg \
+    && sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' \
+    && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
+    && apt-get update \
+    && apt-get install -y \
+    # PostgreSQL 16 with pgvector
+    postgresql-16 \
+    postgresql-contrib-16 \
+    postgresql-16-pgvector \
+    # Build dependencies
+    build-essential \
+    git \
+    curl \
+    # Runtime dependencies
+    netcat-openbsd \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -s /bin/bash sage && \
+    mkdir -p /var/log/sage /var/lib/sage /run/postgresql && \
+    chown -R sage:sage /var/log/sage /var/lib/sage && \
+    chown -R postgres:postgres /run/postgresql /var/lib/postgresql
+
+# Set up Python environment
+WORKDIR /app
+
+# Copy and install Python dependencies
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip cache purge
+
+# Copy application code
+COPY sage_core /app/sage_core
+COPY sage_mcp_stdio_v3.py /app/sage_mcp_stdio_single.py
+
+# Copy initialization scripts
+COPY docker/single/init-db.sql /docker-entrypoint-initdb.d/
+COPY docker/single/entrypoint.sh /entrypoint.sh
+
+# Make scripts executable
+RUN chmod +x /entrypoint.sh && \
+    # Modify sage_mcp_stdio_single.py to use container paths
+    sed -i 's|/tmp/sage_mcp_stdio_v3.log|/var/log/sage/sage_mcp_stdio.log|g' /app/sage_mcp_stdio_single.py
+
+# PostgreSQL configuration
+RUN echo "local all all trust" > /etc/postgresql/16/main/pg_hba.conf && \
+    echo "host all all 127.0.0.1/32 trust" >> /etc/postgresql/16/main/pg_hba.conf && \
+    echo "host all all ::1/128 trust" >> /etc/postgresql/16/main/pg_hba.conf && \
+    echo "listen_addresses = 'localhost'" >> /etc/postgresql/16/main/postgresql.conf && \
+    echo "shared_preload_libraries = 'pgvector'" >> /etc/postgresql/16/main/postgresql.conf
+
+# Environment variables
+ENV PGDATA=/var/lib/postgresql/16/main \
+    SAGE_DB_HOST=localhost \
+    SAGE_DB_PORT=5432 \
+    SAGE_DB_NAME=sage \
+    SAGE_DB_USER=sage \
+    SAGE_DB_PASSWORD=sage \
+    SAGE_LOG_DIR=/var/log/sage \
+    PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Volume for data persistence (optional)
+VOLUME ["/var/lib/postgresql", "/var/lib/sage"]
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD pg_isready -h localhost -p 5432 -U sage -d sage || exit 1
+
+# Use supervisor as entrypoint
+ENTRYPOINT ["/entrypoint.sh"]

@@ -1,46 +1,54 @@
 # Python
-.venv/
-venv/
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 .Python
+env/
+venv/
+ENV/
+.venv
 pip-log.txt
 pip-delete-this-directory.txt
+.pytest_cache/
+*.egg-info/
 
-# 测试和文档
-tests/
-docs/
-*.md
-!README.md
-
-# 开发文件
-.git/
-.gitignore
-.DS_Store
+# Project specific
 *.log
-*.swp
-backups/
+logs/
+tmp/
+*.db
+*.sqlite3
+pgdata/
+.env
+.env.local
 
 # IDE
 .vscode/
 .idea/
-*.sublime-*
+*.swp
+*.swo
+*~
 
-# 临时文件
-tmp/
-temp/
+# OS
+.DS_Store
+Thumbs.db
 
-# 其他
-*.tar.gz
-*.zip
-migration_git_status.txt
-__pycache__
-.git
-.github
-.env
-.pytest_cache
-*.sqlite
-docker-compose*.yml
-Dockerfile*
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Tests
+tests/
+test_*.py
+*_test.py
+
+# Documentation
+docs/
+README.md
+*.md

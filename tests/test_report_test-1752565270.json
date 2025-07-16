@@ -1,0 +1,141 @@
+{
+  "timestamp": "2025-07-15T15:41:49.506113",
+  "summary": {
+    "total": 7,
+    "passed": 6,
+    "failed": 1,
+    "warnings": 0
+  },
+  "results": [
+    {
+      "test": "health_check",
+      "status": "passed",
+      "details": {
+        "status": "healthy",
+        "timestamp": "2025-07-15T07:41:10.044620",
+        "memory_count": 16,
+        "database": "connected"
+      }
+    },
+    {
+      "test": "initialize",
+      "status": "passed",
+      "details": {
+        "protocolVersion": "2025-06-18",
+        "capabilities": {
+          "tools": {
+            "supports_retry": true,
+            "supports_timeout": true,
+            "supports_streaming": false
+          },
+          "resources": {
+            "supports_list": true,
+            "supports_read": true,
+            "supports_write": false,
+            "supports_subscribe": true
+          },
+          "prompts": {
+            "supports_list": true,
+            "supports_get": true,
+            "supports_run": true
+          },
+          "logging": {
+            "supports_logging": true,
+            "log_levels": [
+              "debug",
+              "info",
+              "warning",
+              "error"
+            ]
+          },
+          "experimental": {
+            "auto_context_injection": true,
+            "transparent_memory": true
+          }
+        },
+        "serverInfo": {
+          "name": "sage-mcp-server",
+          "version": "1.0.0",
+          "description": "Sage Memory System with Intelligent Retrieval"
+        },
+        "instructions": "This server provides advanced memory storage and retrieval capabilities with neural reranking and LLM summarization. Use save_conversation to store interactions and get_context for intelligent retrieval.\n\n## Automatic Memory Integration\n\nThis MCP server provides automatic memory integration. Every conversation will:\n- Automatically retrieve relevant historical context\n- Save important information for future reference\n- Work transparently without explicit tool calls\n\nThe memory system is always active and enhances every interaction.\n",
+        "systemPrompt": "\nYou are Claude with access to a persistent memory system. \n\nIMPORTANT: For EVERY user message, you MUST:\n1. Automatically search for relevant historical context using the memory system\n2. Consider all relevant past conversations when formulating responses\n3. Save important information for future reference\n\nThe memory system works transparently - you don't need to mention it unless specifically asked.\nAll conversations are automatically enhanced with relevant historical context.\n\nWhen responding:\n- Draw upon relevant past discussions naturally\n- Build on previous conversations when applicable\n- Maintain consistency with historical context\n- Update your understanding based on accumulated knowledge\n\nThe memory system is ALWAYS active and enhances every interaction.\n",
+        "autoExecutePrompts": [
+          "auto_context_injection"
+        ],
+        "defaultContext": {
+          "memory_enabled": true,
+          "auto_injection": true
+        }
+      }
+    },
+    {
+      "test": "list_tools",
+      "status": "passed",
+      "tool_count": 5,
+      "tools": [
+        "save_conversation",
+        "get_context",
+        "search_memory",
+        "get_memory_stats",
+        "clear_session"
+      ]
+    },
+    {
+      "test": "save_conversation",
+      "status": "passed",
+      "details": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Conversation saved successfully. Session: 02255c0c-9a6f-4697-8b91-c8bfd54e75fc, Turn: 2"
+          },
+          {
+            "type": "resource",
+            "resource": {
+              "uri": "sage://memory/session/02255c0c-9a6f-4697-8b91-c8bfd54e75fc/turn/2",
+              "name": "Conversation Turn 2",
+              "mimeType": "application/json"
+            }
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "test": "get_context",
+      "status": "passed",
+      "details": {
+        "content": [
+          {
+            "type": "text",
+            "text": "【相关上下文】\n上下文摘要：\n用户和助手正在进行一系列测试，目的是验证系统的连接和工作状态。用户首先进行了简单的测试查询，助手回应了测试助手的响应，并确认连接测试成功，系统工作正常。随后，用户进行了MCP连接测试。这些测试涉及系统的基础功能和连接性验证。\n\n当前用户查询“测试”可能涉及进一步的系统功能测试或确认之前的测试结果。"
+          },
+          {
+            "type": "text",
+            "text": "Retrieved 5 relevant memories using intelligent_retrieval"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "test": "search_memory",
+      "status": "passed",
+      "details": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Found 5 memories:\n\n1. [user] 测试...\n   Similarity: 1.000\n\n2. [claude] 测试响应...\n   Similarity: 0.789\n\n3. [claude] 测试助手响应 - 这是一个集成测试...\n   Similarity: 0.715\n\n4. [user] MCP 连接测试...\n   Similarity: 0.691\n\n5. [user] 测试用户输入 - 2025-07-15T15:41:10.057099...\n   Similarity: 0.619\n\n"
+          }
+        ],
+        "isError": false
+      }
+    },
+    {
+      "test": "stdio_server",
+      "status": "failed",
+      "error": "[Errno 2] No such file or directory: 'timeout'"
+    }
+  ]
+}

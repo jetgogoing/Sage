@@ -1,35 +1,26 @@
-# Sage MCP Server Dependencies
-# Core web framework
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
+# Core dependencies for Sage MCP Single Container (Cloud API Version)
+# Uses SiliconFlow API instead of local ML models
 
-# Database and ORM
-asyncpg==0.29.0
-psycopg2-binary==2.9.9
+# MCP SDK
+mcp>=1.1.0
+
+# Database
+asyncpg>=0.29.0
+pgvector>=0.2.5
 
 # HTTP client for API calls
-requests==2.31.0
-aiohttp==3.9.1
-httpx==0.25.2
+requests>=2.31.0
 
-# Data processing and validation
-pydantic==2.5.0
-numpy==1.26.4
+# Core
+numpy>=1.24.0  # For vector operations
 
-# Environment and configuration
-python-dotenv==1.0.0
+# Authentication
+PyJWT>=2.8.0
 
-# System monitoring
-psutil==5.9.6
+# Web server (optional, not used in STDIO mode)
+# fastapi>=0.104.0
+# uvicorn>=0.24.0
 
-# Logging and monitoring
-structlog==23.2.0
-
-# Testing (development)
-pytest==7.4.3
-pytest-asyncio==0.21.1
-
-# Code quality (development)
-black==23.11.0
-flake8==6.1.0
-mypy==1.7.1
+# Utilities
+python-dotenv>=1.0.0
+aiofiles>=23.2.1
