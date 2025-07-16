@@ -1,0 +1,38 @@
+# Sage MCP Single Container - Minimal Edition
+# Based on python:3.10-slim for smallest size
+FROM python:3.10-slim
+
+# Install PostgreSQL and required system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    postgresql-15 \
+    postgresql-contrib-15 \
+    postgresql-client-15 \
+    curl \
+    ca-certificates \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+
+# Copy database initialization script
+COPY docker/single/init.sql /docker-entrypoint-initdb.d/
+
+# Copy core application files
+COPY ./sage_core /app/sage_core
+COPY ./sage_mcp_stdio_single.py /app/
+COPY ./requirements.txt /app/
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy and set up entrypoint script
+COPY docker/single/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# PostgreSQL data directory
+ENV PGDATA=/var/lib/postgresql/data
+
+# MCP requires STDIO communication
+ENTRYPOINT ["/entrypoint.sh"]

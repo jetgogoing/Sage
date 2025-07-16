@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "sage": {
+      "type": "stdio",
+      "command": ["./run_sage_single_persistent.sh"],
+      "connectTimeout": 15000
+    }
+  }
+}

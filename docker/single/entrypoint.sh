@@ -78,4 +78,4 @@ export SAGE_LOG_LEVEL="INFO"
 # Start the STDIO service
 # All logs go to files, keeping STDIO clean for MCP protocol
 echo "[INIT] Starting Sage MCP STDIO service..."
-exec python /app/sage_mcp_stdio_single.py
+exec python -u /app/sage_mcp_stdio_single.py

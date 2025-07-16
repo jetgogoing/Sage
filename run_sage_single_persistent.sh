@@ -37,10 +37,9 @@ else
     echo "Creating and starting new container ${CONTAINER_NAME}..."
     # Run the container with data persistence
     # -i: Keep STDIN open (required for MCP STDIO)
-    # -t: Allocate a pseudo-TTY
     # --name: Give container a persistent name
     # -v: Mount volume for PostgreSQL data persistence
-    exec docker run -it \
+    exec docker run -i \
         --name ${CONTAINER_NAME} \
         -v sage-mcp-data:/var/lib/postgresql/data \
         $SAGE_DOCKER_OPTS \

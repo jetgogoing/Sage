@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  sage-mcp:
+    build:
+      context: .
+      dockerfile: docker/single/Dockerfile.single.minimal
+    image: sage-mcp-single:minimal
+    container_name: sage-mcp
+    stdin_open: true
+    tty: false
+    environment:
+      - PGDATA=/var/lib/postgresql/data
+      - DATABASE_URL=postgresql://sage:sage@localhost:5432/sage_memory
+      - SAGE_ENV=production
+      - SAGE_LOG_LEVEL=INFO
+    volumes:
+      - sage-data:/var/lib/postgresql/data
+      - sage-logs:/var/log/sage
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  sage-data:
+    driver: local
+  sage-logs:
+    driver: local
