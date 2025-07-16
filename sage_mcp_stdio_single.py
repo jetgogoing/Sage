@@ -632,6 +632,8 @@ class SageMCPStdioServerV3:
     async def run(self):
         """运行 MCP 服务器"""
         logger.info("Starting Sage MCP stdio server v3...")
+        print("Initializing Sage MCP server...", file=sys.stderr)
+        sys.stderr.flush()
         
         # 初始化 sage_core
         config = {
@@ -656,7 +658,16 @@ class SageMCPStdioServerV3:
             # 继续运行，某些功能可能受限
         
         # 运行 stdio 服务器
+        print("Starting STDIO server...", file=sys.stderr)
+        sys.stderr.flush()
+        
         async with stdio_server() as (read_stream, write_stream):
+            print("STDIO server streams created, running MCP server...", file=sys.stderr)
+            sys.stderr.flush()
+            
+            # 输出 ready 信号给 Claude CLI
+            print('{"type": "ready"}', flush=True)
+            
             await self.server.run(
                 read_stream,
                 write_stream,
@@ -686,13 +697,20 @@ class SageMCPStdioServerV3:
 
 async def main():
     """主函数"""
+    print("Starting Sage MCP STDIO server...", file=sys.stderr)
+    sys.stderr.flush()
+    
     server = SageMCPStdioServerV3()
     try:
         await server.run()
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
+        print("Server stopped by user", file=sys.stderr)
     except Exception as e:
         logger.error(f"Server error: {e}")
+        print(f"Server error: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
         raise
     finally:
         await server.cleanup()

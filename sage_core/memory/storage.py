@@ -49,11 +49,14 @@ class MemoryStorage(IMemoryProvider):
             # 将向量转换为列表（PostgreSQL pgvector 需要）
             embedding_list = embedding.tolist()
             
+            # 将向量列表转换为 PostgreSQL vector 格式的字符串
+            embedding_str = '[' + ','.join(map(str, embedding_list)) + ']'
+            
             # 插入记录
             query = '''
                 INSERT INTO memories 
                 (id, session_id, user_input, assistant_response, embedding, metadata)
-                VALUES ($1, $2, $3, $4, $5, $6)
+                VALUES ($1, $2, $3, $4, $5::vector, $6)
                 RETURNING id
             '''
             
@@ -63,7 +66,7 @@ class MemoryStorage(IMemoryProvider):
                 session_id,
                 user_input,
                 assistant_response,
-                embedding_list,
+                embedding_str,
                 json.dumps(metadata, ensure_ascii=False)
             )
             
@@ -80,28 +83,31 @@ class MemoryStorage(IMemoryProvider):
         try:
             embedding_list = query_embedding.tolist()
             
-            # 构建查询
+            # 将向量列表转换为 PostgreSQL vector 格式的字符串
+            embedding_str = '[' + ','.join(map(str, embedding_list)) + ']'
+            
+            # 构建查询 - 使用 pgvector 的余弦相似度
             if session_id:
                 query = '''
                     SELECT id, session_id, user_input, assistant_response, 
                            metadata, created_at,
-                           0.5 as similarity
+                           1 - (embedding <=> $1::vector) as similarity
                     FROM memories
                     WHERE session_id = $2
-                    ORDER BY created_at DESC
+                    ORDER BY embedding <=> $1::vector
                     LIMIT $3
                 '''
-                results = await self.db.fetch(query, session_id, limit)
+                results = await self.db.fetch(query, embedding_str, session_id, limit)
             else:
                 query = '''
                     SELECT id, session_id, user_input, assistant_response, 
                            metadata, created_at,
-                           0.5 as similarity
+                           1 - (embedding <=> $1::vector) as similarity
                     FROM memories
-                    ORDER BY created_at DESC
+                    ORDER BY embedding <=> $1::vector
                     LIMIT $2
                 '''
-                results = await self.db.fetch(query, limit)
+                results = await self.db.fetch(query, embedding_str, limit)
             
             # 转换结果
             memories = []

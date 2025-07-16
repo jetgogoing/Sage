@@ -1,13 +1,16 @@
 -- Sage MCP Database Initialization Script
--- Creates tables for memory storage with hash-based vectorization
+-- Creates tables for memory storage with pgvector support
 
--- Create memories table with JSONB for vector storage
+-- Create pgvector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Create memories table with vector storage
 CREATE TABLE IF NOT EXISTS memories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id VARCHAR(255),
     user_input TEXT NOT NULL,
     assistant_response TEXT NOT NULL,
-    embedding JSONB,  -- Store hash vectors as JSONB array
+    embedding vector(4096),  -- Store 4096-dimensional vectors
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -16,7 +19,8 @@ CREATE TABLE IF NOT EXISTS memories (
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_memories_session_id ON memories(session_id);
 CREATE INDEX IF NOT EXISTS idx_memories_created_at ON memories(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_memories_embedding ON memories USING GIN (embedding);
+-- Note: For 4096 dimensions, we skip the vector index as ivfflat has a 2000 dimension limit
+-- HNSW index would work but requires more setup. Sequential scan will be used for now.
 
 -- Create sessions table
 CREATE TABLE IF NOT EXISTS sessions (

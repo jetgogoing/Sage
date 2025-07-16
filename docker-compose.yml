@@ -9,12 +9,26 @@ services:
     container_name: sage-mcp
     stdin_open: true
     tty: false
+    ports:
+      - "5432:5432"  # 映射 PostgreSQL 端口到主机
     environment:
       - PGDATA=/var/lib/postgresql/data
       - DATABASE_URL=postgresql://sage:sage@localhost:5432/sage_memory
       - SAGE_ENV=production
       - SAGE_LOG_LEVEL=INFO
+      - POSTGRES_PASSWORD=sage
+      - SILICONFLOW_API_KEY=${SILICONFLOW_API_KEY}
+      # 添加 sage_mcp_stdio_single.py 需要的环境变量
+      - DB_HOST=localhost
+      - DB_PORT=5432
+      - DB_NAME=sage_memory
+      - DB_USER=sage
+      - DB_PASSWORD=sage
     volumes:
+      # 挂载本地代码，方便开发调试
+      - ./sage_core:/app/sage_core
+      - ./sage_mcp_stdio_single.py:/app/sage_mcp_stdio_single.py
+      # 数据持久化
       - sage-data:/var/lib/postgresql/data
       - sage-logs:/var/log/sage
     healthcheck:
@@ -22,7 +36,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
 
 volumes:
   sage-data:

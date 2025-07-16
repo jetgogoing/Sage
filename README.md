@@ -100,14 +100,14 @@ docker ps | grep sage-mcp
 
 ### 4. 在 Claude Code 中使用
 
-方式一：**Docker 部署（推荐）**
+#### 方式一：**Docker 部署（推荐）**
 
 1. 确保 Docker 容器正在运行：
 ```bash
 docker ps | grep sage-mcp
 ```
 
-2. 在 Claude Code 设置中添加 MCP 服务器配置：
+2. 在项目根目录创建 `.mcp.json` 文件：
 ```json
 {
   "mcpServers": {
@@ -120,9 +120,16 @@ docker ps | grep sage-mcp
 }
 ```
 
-方式二：**本地运行（开发模式）**
+**重要**：这个配置让 Claude 连接到 Docker 容器内已经运行的 stdio 服务，而不是启动新的本地进程。
 
-如果你想直接运行而不使用 Docker，可以使用项目根目录的 `.mcp.json` 配置文件：
+3. 重启 Claude Code，Sage 会自动加载！
+
+#### 方式二：**本地运行（开发模式）**
+
+如果你想直接运行而不使用 Docker：
+
+1. 确保本地 PostgreSQL 正在运行
+2. 创建 `.mcp.json` 配置文件：
 ```json
 {
   "mcpServers": {
@@ -131,18 +138,20 @@ docker ps | grep sage-mcp
       "command": "python",
       "args": ["/path/to/sage/sage_mcp_stdio_single.py"],
       "env": {
-        "SAGE_DB_HOST": "localhost",
-        "SAGE_DB_PORT": "5432",
-        "SAGE_DB_NAME": "sage_memory",
-        "SAGE_DB_USER": "sage",
-        "SAGE_DB_PASSWORD": "sage"
+        "DB_HOST": "localhost",
+        "DB_PORT": "5432",
+        "DB_NAME": "sage_memory",
+        "DB_USER": "sage",
+        "DB_PASSWORD": "sage",
+        "SAGE_LOG_DIR": "/path/to/sage/logs",
+        "PYTHONPATH": "/path/to/sage"
       }
     }
   }
 }
 ```
 
-3. 重启 Claude Code，Sage 会自动加载！
+**注意**：环境变量必须使用 `DB_*` 格式，而不是 `SAGE_DB_*`。
 
 ## 📖 使用指南
 
@@ -183,6 +192,29 @@ SAGE_ENABLE_SUMMARY=true    # 启用LLM压缩摘要
 SAGE_CACHE_SIZE=500         # 缓存大小
 SAGE_CACHE_TTL=300          # 缓存过期时间（秒）
 ```
+
+## ⚡ 快速诊断
+
+如果遇到连接问题，请按以下步骤快速诊断：
+
+```bash
+# 1. 检查 Docker 容器状态
+docker ps | grep sage-mcp  # 应该显示 healthy 状态
+
+# 2. 检查本地是否有冲突进程
+ps aux | grep sage_mcp_stdio_single | grep -v docker
+
+# 3. 验证 MCP 配置
+cat .mcp.json  # 确保使用 docker exec 命令
+
+# 4. 查看容器日志
+docker logs sage-mcp --tail 50 | grep ERROR
+
+# 5. 测试数据库连接
+docker exec sage-mcp psql -U sage -d sage_memory -c "SELECT 1;"
+```
+
+如果以上检查都正常但仍有问题，请参考详细的故障排除指南。
 
 ## 🏗️ 系统架构
 
@@ -436,13 +468,61 @@ docker exec -i sage-mcp python /app/sage_mcp_stdio_single.py <<< '{"jsonrpc":"2.
 docker-compose restart
 ```
 
+#### 问题：Connection reset by peer 错误
+
+这是最常见的问题，通常由以下原因引起：
+
+##### 原因1：架构不匹配
+**症状**：Docker 容器运行正常，但仍然报连接错误。
+**诊断**：
+```bash
+# 检查是否有本地 Python 进程在运行
+ps aux | grep sage_mcp_stdio_single
+
+# 检查 Docker 容器内的进程
+docker top sage-mcp
+```
+**解决方案**：确保 `.mcp.json` 使用 `docker exec` 而不是直接运行 Python：
+```json
+{
+  "mcpServers": {
+    "sage": {
+      "type": "stdio",
+      "command": "docker",
+      "args": ["exec", "-i", "sage-mcp", "python", "-u", "/app/sage_mcp_stdio_single.py"]
+    }
+  }
+}
+```
+
+##### 原因2：环境变量命名错误
+**症状**：日志显示使用了错误的数据库密码（如 `sage123`）。
+**解决方案**：确保环境变量使用 `DB_*` 格式，而不是 `SAGE_DB_*`。
+
+##### 原因3：数据库权限问题
+**症状**：错误信息包含 "permission denied for schema public" 或 "must be owner of table"。
+**解决方案**：
+```bash
+# 授予正确的权限
+docker exec sage-mcp psql -U postgres -d sage_memory -c "
+GRANT ALL ON SCHEMA public TO sage;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO sage;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO sage;
+ALTER TABLE memories OWNER TO sage;
+ALTER TABLE sessions OWNER TO sage;"
+```
+
+##### 原因4：向量格式错误
+**症状**：错误信息包含 "invalid input for query argument $5: [...] (expected str, got list)"。
+**解决方案**：这是代码问题，需要更新 `sage_core/memory/storage.py` 中的向量转换代码。最新版本已修复。
+
 #### 问题：记忆检索速度慢
 ```bash
 # 1. 检查性能指标
 /SAGE-STATUS
 
 # 2. 优化数据库
-docker exec sage-postgres psql -U sage -c "VACUUM ANALYZE;"
+docker exec sage-mcp psql -U sage -d sage_memory -c "VACUUM ANALYZE;"
 
 # 3. 清理旧数据
 /forget all  # 谨慎使用
@@ -458,6 +538,20 @@ curl https://api.siliconflow.cn/v1/embeddings \
   -H "Authorization: Bearer $SILICONFLOW_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model": "BAAI/bge-large-zh-v1.5", "input": "test"}'
+```
+
+#### 问题：Docker 容器无法启动
+```bash
+# 1. 检查端口占用
+lsof -i :5432
+
+# 2. 清理并重建
+docker-compose down -v
+docker-compose build --no-cache
+docker-compose up -d
+
+# 3. 检查容器日志
+docker logs sage-mcp --tail 100
 ```
 
 ### 📊 监控和分析
@@ -562,6 +656,13 @@ done
 5. **监控系统状态** - 及时发现问题
 
 ## 📋 更新日志
+
+### v1.1.1 (2025-01-17) - 关键修复版本
+- 🐛 修复架构不匹配问题：确保 MCP 连接到容器内的 stdio 服务
+- 🔧 修复环境变量命名问题：统一使用 `DB_*` 格式
+- 🛡️ 修复数据库权限问题：正确设置 sage 用户权限
+- 📊 修复向量格式错误：将列表转换为 PostgreSQL vector 字符串格式
+- 📚 更新文档：添加详细的故障排除指南
 
 ### v1.1.0 (2025-01-16) - stdio 版本发布
 - 🎯 切换到 MCP stdio 协议，更加稳定可靠

@@ -42,10 +42,11 @@ if [ ! -d "$PGDATA" ] || [ -z "$(ls -A "$PGDATA")" ]; then
     # Initialize database
     su - postgres -c "/usr/lib/postgresql/15/bin/initdb -D $PGDATA"
     
-    # Configure PostgreSQL for local connections
+    # Configure PostgreSQL for local and external connections
     echo "host    all             all             127.0.0.1/32            trust" >> "$PGDATA/pg_hba.conf"
+    echo "host    all             all             0.0.0.0/0               md5" >> "$PGDATA/pg_hba.conf"
     echo "local   all             all                                     trust" >> "$PGDATA/pg_hba.conf"
-    echo "listen_addresses = 'localhost'" >> "$PGDATA/postgresql.conf"
+    echo "listen_addresses = '*'" >> "$PGDATA/postgresql.conf"
 fi
 
 # Start PostgreSQL
@@ -61,8 +62,9 @@ su - postgres -c "psql -tc \"SELECT 1 FROM pg_database WHERE datname = 'sage_mem
 su - postgres -c "psql -tc \"SELECT 1 FROM pg_user WHERE usename = 'sage'\" | grep -q 1 || createuser sage"
 su - postgres -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE sage_memory TO sage;\""
 
-# Skip pgvector installation - using hash vectorization with JSONB instead
-echo "[INIT] Using hash-based vectorization (no pgvector needed)..."
+# Create pgvector extension
+echo "[INIT] Creating pgvector extension..."
+su - postgres -c "psql -d sage_memory -c 'CREATE EXTENSION IF NOT EXISTS vector;'"
 
 # Run initialization SQL if exists
 if [ -f /docker-entrypoint-initdb.d/init.sql ]; then
@@ -74,6 +76,13 @@ fi
 export DATABASE_URL="postgresql://sage:sage@localhost:5432/sage_memory"
 export SAGE_ENV="production"
 export SAGE_LOG_LEVEL="INFO"
+
+# Set individual database environment variables for sage_mcp_stdio_single.py
+export DB_HOST="localhost"
+export DB_PORT="5432"
+export DB_NAME="sage_memory"
+export DB_USER="sage"
+export DB_PASSWORD="sage"
 
 # Start the STDIO service
 # All logs go to files, keeping STDIO clean for MCP protocol

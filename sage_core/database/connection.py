@@ -157,10 +157,12 @@ class DatabaseConnection:
                 ON memories(created_at DESC)
             ''')
             
-            await conn.execute('''
-                CREATE INDEX IF NOT EXISTS idx_memories_embedding 
-                ON memories USING ivfflat (embedding vector_cosine_ops)
-                WITH (lists = 100)
-            ''')
+            # Note: For 4096 dimensions, we skip the vector index as ivfflat has a 2000 dimension limit
+            # HNSW index would work but requires more setup. Sequential scan will be used for now.
+            # await conn.execute('''
+            #     CREATE INDEX IF NOT EXISTS idx_memories_embedding 
+            #     ON memories USING ivfflat (embedding vector_cosine_ops)
+            #     WITH (lists = 100)
+            # ''')
             
             logger.info("数据库模式初始化完成")

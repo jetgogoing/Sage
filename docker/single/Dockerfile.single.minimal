@@ -10,8 +10,20 @@ RUN apt-get update && \
     postgresql-client-15 \
     curl \
     ca-certificates \
+    build-essential \
+    postgresql-server-dev-15 \
+    git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Install pgvector from source
+RUN cd /tmp && \
+    git clone --branch v0.5.1 https://github.com/pgvector/pgvector.git && \
+    cd pgvector && \
+    make && \
+    make install && \
+    cd / && \
+    rm -rf /tmp/pgvector
 
 # Create app directory
 WORKDIR /app
