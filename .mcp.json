@@ -2,7 +2,7 @@
   "mcpServers": {
     "sage": {
       "type": "stdio",
-      "command": "./scripts/sage_mcp_stdio_wrapper.sh",
+      "command": "/Users/jet/sage/start_sage_mcp.sh",
       "args": []
     }
   }

@@ -5,7 +5,7 @@ Memory Storage - 记忆存储实现
 """
 import uuid
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 import numpy as np
 import json
 import logging
@@ -118,7 +118,7 @@ class MemoryStorage(IMemoryProvider):
                     'user_input': row['user_input'],
                     'assistant_response': row['assistant_response'],
                     'metadata': json.loads(row['metadata']) if row['metadata'] else {},
-                    'created_at': row['created_at'].isoformat(),
+                    'created_at': row['created_at'].astimezone().isoformat(),
                     'similarity': float(row['similarity'])
                 }
                 memories.append(memory)
@@ -148,7 +148,7 @@ class MemoryStorage(IMemoryProvider):
                     'user_input': row['user_input'],
                     'assistant_response': row['assistant_response'],
                     'metadata': json.loads(row['metadata']) if row['metadata'] else {},
-                    'created_at': row['created_at'].isoformat()
+                    'created_at': row['created_at'].astimezone().isoformat()
                 }
             
             return None
@@ -181,7 +181,7 @@ class MemoryStorage(IMemoryProvider):
             
             # 添加更新时间
             set_clauses.append(f"updated_at = ${len(values) + 1}")
-            values.append(datetime.utcnow())
+            values.append(datetime.now(timezone.utc))
             
             # 添加ID参数
             values.append(uuid.UUID(memory_id))
@@ -230,8 +230,8 @@ class MemoryStorage(IMemoryProvider):
                 sessions.append({
                     'session_id': row['session_id'],
                     'memory_count': row['memory_count'],
-                    'created_at': row['created_at'].isoformat(),
-                    'last_active': row['last_active'].isoformat()
+                    'created_at': row['created_at'].astimezone().isoformat(),
+                    'last_active': row['last_active'].astimezone().isoformat()
                 })
             
             return sessions
@@ -272,7 +272,7 @@ class MemoryStorage(IMemoryProvider):
                     'user_input': row['user_input'],
                     'assistant_response': row['assistant_response'],
                     'metadata': json.loads(row['metadata']) if row['metadata'] else {},
-                    'created_at': row['created_at'].isoformat()
+                    'created_at': row['created_at'].astimezone().isoformat()
                 })
             
             return memories
@@ -317,7 +317,7 @@ class MemoryStorage(IMemoryProvider):
                     'user_input': row['user_input'],
                     'assistant_response': row['assistant_response'],
                     'metadata': json.loads(row['metadata']) if row['metadata'] else {},
-                    'created_at': row['created_at'].isoformat()
+                    'created_at': row['created_at'].astimezone().isoformat()
                 })
             
             return memories
@@ -350,8 +350,8 @@ class MemoryStorage(IMemoryProvider):
             
             stats = {
                 'total_memories': row['total'],
-                'first_memory': row['first_memory'].isoformat() if row['first_memory'] else None,
-                'last_memory': row['last_memory'].isoformat() if row['last_memory'] else None
+                'first_memory': row['first_memory'].astimezone().isoformat() if row['first_memory'] else None,
+                'last_memory': row['last_memory'].astimezone().isoformat() if row['last_memory'] else None
             }
             
             if not session_id and 'session_count' in row:

@@ -435,23 +435,23 @@ class SageMCPStdioServerV3:
                 context = await self.sage_core.get_context(user_input, max_results=5)
                 
                 messages = []
-                if context and context != "没有找到相关的历史记忆。":
-                    messages.append(
-                        PromptMessage(
-                            role="system",
-                            content=TextContent(
-                                type="text",
-                                text=f"基于以下相关历史记忆：\n\n{context}\n\n请回答用户的问题。"
-                            )
-                        )
-                    )
-                
                 messages.append(
                     PromptMessage(
                         role="user",
                         content=TextContent(type="text", text=user_input)
                     )
                 )
+                
+                if context and context != "没有找到相关的历史记忆。":
+                    messages.append(
+                        PromptMessage(
+                            role="assistant",
+                            content=TextContent(
+                                type="text",
+                                text=f"基于以下相关历史记忆：\n\n{context}\n\n请回答用户的问题。"
+                            )
+                        )
+                    )
                 
                 return GetPromptResult(
                     description="已注入相关历史上下文",
