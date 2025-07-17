@@ -73,12 +73,20 @@ main() {
     # 直接运行 MCP STDIO 服务
     # 注意：不使用 -d，这样容器生命周期与 stdio 会话绑定
     # 传递必要的环境变量
+    # 挂载主机时区文件（如果存在）
+    TIMEZONE_MOUNT=""
+    if [ -f /etc/localtime ]; then
+        TIMEZONE_MOUNT="-v /etc/localtime:/etc/localtime:ro"
+    fi
+    
     exec docker run --rm -i \
         -v sage-mcp-data:/var/lib/postgresql/data \
         -v sage-mcp-logs:/var/log/sage \
+        $TIMEZONE_MOUNT \
         -e SILICONFLOW_API_KEY="${SILICONFLOW_API_KEY:-}" \
         -e OPENAI_API_KEY="${OPENAI_API_KEY:-}" \
         -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:-}" \
+        -e TZ="Asia/Shanghai" \
         "$IMAGE_NAME"
 }
 

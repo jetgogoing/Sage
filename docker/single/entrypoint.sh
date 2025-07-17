@@ -47,6 +47,7 @@ if [ ! -d "$PGDATA" ] || [ -z "$(ls -A "$PGDATA")" ]; then
     echo "host    all             all             0.0.0.0/0               md5" >> "$PGDATA/pg_hba.conf"
     echo "local   all             all                                     trust" >> "$PGDATA/pg_hba.conf"
     echo "listen_addresses = '*'" >> "$PGDATA/postgresql.conf"
+    echo "timezone = 'Asia/Shanghai'" >> "$PGDATA/postgresql.conf"
 fi
 
 # Start PostgreSQL
