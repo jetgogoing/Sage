@@ -2,15 +2,8 @@
   "mcpServers": {
     "sage": {
       "type": "stdio",
-      "command": "docker",
-      "args": [
-        "exec",
-        "-i",
-        "sage-mcp",
-        "python",
-        "-u",
-        "/app/sage_mcp_stdio_single.py"
-      ]
+      "command": "./scripts/sage_mcp_stdio_wrapper.sh",
+      "args": []
     }
   }
 }

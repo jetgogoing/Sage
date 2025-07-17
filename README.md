@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?logo=docker&logoColor=white)](https://www.docker.com/)
-[![Version](https://img.shields.io/badge/version-1.1.0-green.svg)](https://github.com/jetgogoing/Sage/releases)
+[![Version](https://img.shields.io/badge/version-1.1.2-green.svg)](https://github.com/jetgogoing/Sage/releases)
 
 **🧠 让 Claude 成为真正的 Sage - 一个拥有永恒记忆的数字哲人**
 
@@ -268,7 +268,7 @@ Sage/
 ├── docker/                     # Docker 相关文件
 │   └── single/                 # 单容器版本
 │       ├── Dockerfile.single.minimal
-│       └── entrypoint.sh       # 启动脚本
+│       └── entrypoint.sh       # 容器启动脚本
 ├── docker-compose.yml          # 容器编排配置
 └── docs/                       # 详细文档
     └── 执行报告/               # 开发报告
