@@ -10,6 +10,7 @@ Sage Prompt Enhancer Hook
 """
 
 import json
+import os
 import sys
 import subprocess
 import logging
@@ -154,7 +155,12 @@ class SagePromptEnhancer:
             # 直接调用 sage_core 而不是通过 subprocess
             import sys
             import asyncio
-            sys.path.insert(0, '/Users/jet/Sage')
+            from pathlib import Path
+            
+            # 动态计算项目根目录 - 跨平台兼容
+            script_path = Path(__file__).resolve()
+            sage_root = script_path.parent.parent.parent
+            sys.path.insert(0, str(sage_root))
             
             async def call_sage_core():
                 from sage_core.singleton_manager import get_sage_core
