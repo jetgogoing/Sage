@@ -11,20 +11,27 @@ import json
 import logging
 from ..interfaces.memory import IMemoryProvider
 from ..database import DatabaseConnection
+from ..database.transaction import TransactionManager, TransactionalStorage
+from ..resilience import retry, circuit_breaker, CircuitBreakerOpenError
 
 logger = logging.getLogger(__name__)
 
 
-class MemoryStorage(IMemoryProvider):
-    """记忆存储实现类"""
+class MemoryStorage(IMemoryProvider, TransactionalStorage):
+    """记忆存储实现类 - 支持事务管理"""
     
-    def __init__(self, db_connection: DatabaseConnection):
+    def __init__(self, db_connection: DatabaseConnection, transaction_manager: Optional[TransactionManager] = None):
         """初始化存储
         
         Args:
             db_connection: 数据库连接管理器
+            transaction_manager: 事务管理器（可选）
         """
         self.db = db_connection
+        # 如果提供了事务管理器，初始化事务支持
+        if transaction_manager:
+            TransactionalStorage.__init__(self, transaction_manager)
+        self._transaction_manager = transaction_manager
     
     async def connect(self) -> None:
         """建立数据库连接"""
@@ -34,10 +41,12 @@ class MemoryStorage(IMemoryProvider):
         """断开数据库连接"""
         await self.db.disconnect()
     
+    @retry(max_attempts=3, initial_delay=0.5)
+    @circuit_breaker("memory_storage_save", failure_threshold=5, recovery_timeout=60)
     async def save(self, user_input: str, assistant_response: str, 
                    embedding: np.ndarray, metadata: Optional[Dict[str, Any]] = None,
-                   session_id: Optional[str] = None) -> str:
-        """保存记忆到数据库"""
+                   session_id: Optional[str] = None, **kwargs) -> str:
+        """保存记忆到数据库 - 带重试和断路器保护"""
         try:
             # 生成记忆ID
             memory_id = str(uuid.uuid4())
@@ -52,7 +61,7 @@ class MemoryStorage(IMemoryProvider):
             # 将向量列表转换为 PostgreSQL vector 格式的字符串
             embedding_str = '[' + ','.join(map(str, embedding_list)) + ']'
             
-            # 插入记录
+            # 插入记录 - 支持事务
             query = '''
                 INSERT INTO memories 
                 (id, session_id, user_input, assistant_response, embedding, metadata)
@@ -60,26 +69,45 @@ class MemoryStorage(IMemoryProvider):
                 RETURNING id
             '''
             
-            result = await self.db.fetchval(
-                query,
-                memory_id,
-                session_id,
-                user_input,
-                assistant_response,
-                embedding_str,
-                json.dumps(metadata, ensure_ascii=False)
-            )
+            # 如果有事务管理器，使用事务连接
+            if self._transaction_manager and '_transaction_conn' in kwargs:
+                conn = kwargs['_transaction_conn']
+                result = await conn.fetchval(
+                    query,
+                    memory_id,
+                    session_id,
+                    user_input,
+                    assistant_response,
+                    embedding_str,
+                    json.dumps(metadata, ensure_ascii=False)
+                )
+            else:
+                # 否则使用普通连接
+                result = await self.db.fetchval(
+                    query,
+                    memory_id,
+                    session_id,
+                    user_input,
+                    assistant_response,
+                    embedding_str,
+                    json.dumps(metadata, ensure_ascii=False)
+                )
             
             logger.info(f"记忆已保存：{result}")
             return result
             
+        except CircuitBreakerOpenError:
+            logger.error("存储保存断路器已打开，拒绝请求")
+            raise
         except Exception as e:
             logger.error(f"保存记忆失败：{e}")
             raise
     
+    @retry(max_attempts=3, initial_delay=0.5)
+    @circuit_breaker("memory_storage_search", failure_threshold=5, recovery_timeout=60)
     async def search(self, query_embedding: np.ndarray, limit: int = 10,
                     session_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        """向量相似度搜索"""
+        """向量相似度搜索 - 带重试和断路器保护"""
         try:
             embedding_list = query_embedding.tolist()
             
@@ -125,6 +153,9 @@ class MemoryStorage(IMemoryProvider):
             
             return memories
             
+        except CircuitBreakerOpenError:
+            logger.error("存储搜索断路器已打开，拒绝请求")
+            raise
         except Exception as e:
             logger.error(f"搜索记忆失败：{e}")
             raise
@@ -281,9 +312,11 @@ class MemoryStorage(IMemoryProvider):
             logger.error(f"获取会话记忆失败：{e}")
             raise
     
+    @retry(max_attempts=3, initial_delay=0.5)
+    @circuit_breaker("memory_storage_text_search", failure_threshold=5, recovery_timeout=60)
     async def search_by_text(self, query: str, limit: int = 10,
                            session_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        """文本搜索"""
+        """文本搜索 - 带重试和断路器保护"""
         try:
             search_pattern = f'%{query}%'
             
@@ -322,6 +355,9 @@ class MemoryStorage(IMemoryProvider):
             
             return memories
             
+        except CircuitBreakerOpenError:
+            logger.error("文本搜索断路器已打开，拒绝请求")
+            raise
         except Exception as e:
             logger.error(f"文本搜索失败：{e}")
             raise

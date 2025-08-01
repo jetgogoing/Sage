@@ -11,8 +11,10 @@ import logging
 
 from ..interfaces import MemoryContent, SearchOptions
 from ..database import DatabaseConnection
+from ..database.transaction import TransactionManager
 from .storage import MemoryStorage
 from .vectorizer import TextVectorizer
+from ..resilience import retry, circuit_breaker, CircuitBreakerOpenError
 
 logger = logging.getLogger(__name__)
 
@@ -21,15 +23,18 @@ class MemoryManager:
     """记忆管理器 - 整合存储和向量化"""
     
     def __init__(self, db_connection: DatabaseConnection, 
-                 vectorizer: TextVectorizer):
+                 vectorizer: TextVectorizer,
+                 transaction_manager: Optional[TransactionManager] = None):
         """初始化记忆管理器
         
         Args:
             db_connection: 数据库连接
             vectorizer: 向量化器
+            transaction_manager: 事务管理器（可选）
         """
-        self.storage = MemoryStorage(db_connection)
+        self.storage = MemoryStorage(db_connection, transaction_manager)
         self.vectorizer = vectorizer
+        self.transaction_manager = transaction_manager
         self.current_session_id: Optional[str] = None
     
     async def initialize(self) -> None:
@@ -42,7 +47,7 @@ class MemoryManager:
         logger.info(f"记忆管理器初始化完成，会话ID：{self.current_session_id}")
     
     async def save(self, content: MemoryContent) -> str:
-        """保存记忆
+        """保存记忆 - 支持事务
         
         Args:
             content: 记忆内容
@@ -50,10 +55,48 @@ class MemoryManager:
         Returns:
             记忆ID
         """
+        # 如果有事务管理器，使用事务保存
+        if self.transaction_manager:
+            return await self._save_with_transaction(content)
+        else:
+            return await self._save_without_transaction(content)
+    
+    async def _save_with_transaction(self, content: MemoryContent) -> str:
+        """在事务中保存记忆"""
+        async with self.transaction_manager.transaction() as conn:
+            try:
+                # 合并用户输入和助手回复进行向量化
+                combined_text = f"{content.user_input}\n{content.assistant_response}"
+                embedding = await self._vectorize_with_protection(combined_text)
+                
+                # 使用当前会话ID（如果内容中没有指定）
+                session_id = content.session_id or self.current_session_id
+                
+                # 保存到存储 - 传递事务连接
+                memory_id = await self.storage.save(
+                    user_input=content.user_input,
+                    assistant_response=content.assistant_response,
+                    embedding=embedding,
+                    metadata=content.metadata,
+                    session_id=session_id,
+                    _transaction_conn=conn
+                )
+                
+                logger.info(f"记忆已保存（事务中）：{memory_id}")
+                return memory_id
+                
+            except Exception as e:
+                logger.error(f"保存记忆失败（事务将回滚）：{e}")
+                raise
+    
+    @retry(max_attempts=3, initial_delay=0.5)
+    @circuit_breaker("memory_save", failure_threshold=5, recovery_timeout=60)
+    async def _save_without_transaction(self, content: MemoryContent) -> str:
+        """不使用事务保存记忆 - 带重试和断路器保护"""
         try:
             # 合并用户输入和助手回复进行向量化
             combined_text = f"{content.user_input}\n{content.assistant_response}"
-            embedding = await self.vectorizer.vectorize(combined_text)
+            embedding = await self._vectorize_with_protection(combined_text)
             
             # 使用当前会话ID（如果内容中没有指定）
             session_id = content.session_id or self.current_session_id
@@ -70,12 +113,30 @@ class MemoryManager:
             logger.info(f"记忆已保存：{memory_id}")
             return memory_id
             
+        except CircuitBreakerOpenError:
+            logger.error("记忆保存断路器已打开，拒绝请求")
+            raise
         except Exception as e:
             logger.error(f"保存记忆失败：{e}")
             raise
     
+    @retry(max_attempts=3, initial_delay=0.5)
+    @circuit_breaker("vectorizer", failure_threshold=5, recovery_timeout=60)
+    async def _vectorize_with_protection(self, text: str) -> List[float]:
+        """带保护的向量化操作"""
+        try:
+            return await self.vectorizer.vectorize(text)
+        except CircuitBreakerOpenError:
+            logger.error("向量化断路器已打开，拒绝请求")
+            raise
+        except Exception as e:
+            logger.error(f"向量化失败：{e}")
+            raise
+    
+    @retry(max_attempts=3, initial_delay=0.5)
+    @circuit_breaker("memory_search", failure_threshold=5, recovery_timeout=60)
     async def search(self, query: str, options: SearchOptions) -> List[Dict[str, Any]]:
-        """搜索记忆
+        """搜索记忆 - 带重试和断路器保护
         
         Args:
             query: 搜索查询
@@ -89,7 +150,7 @@ class MemoryManager:
             
             if options.strategy == "semantic" or options.strategy == "default":
                 # 语义搜索
-                query_embedding = await self.vectorizer.vectorize(query)
+                query_embedding = await self._vectorize_with_protection(query)
                 semantic_results = await self.storage.search(
                     query_embedding=query_embedding,
                     limit=options.limit,
@@ -132,6 +193,9 @@ class MemoryManager:
             # 限制返回数量
             return results[:options.limit]
             
+        except CircuitBreakerOpenError:
+            logger.error("搜索断路器已打开，拒绝请求")
+            raise
         except Exception as e:
             logger.error(f"搜索记忆失败：{e}")
             raise
@@ -147,11 +211,11 @@ class MemoryManager:
             格式化的上下文文本
         """
         try:
-            # 搜索相关记忆
+            # 搜索相关记忆 - 使用全局搜索而不限制会话
             options = SearchOptions(
                 limit=max_results,
                 strategy="default",
-                session_id=self.current_session_id
+                session_id=None  # 修改为None以搜索所有会话的记忆
             )
             
             memories = await self.search(query, options)

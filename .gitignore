@@ -149,3 +149,7 @@ migrate.pyclaude-search-mcp/
 
 # 文档文件夹
 docs/
+tests/
+
+# MCP 配置符号链接
+.mcp。json

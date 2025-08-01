@@ -8,6 +8,7 @@ import asyncpg
 from typing import Optional, Dict, Any
 import logging
 from contextlib import asynccontextmanager
+from ..resilience import retry, circuit_breaker, DATABASE_RETRY_CONFIG, CircuitBreakerOpenError
 
 logger = logging.getLogger(__name__)
 
@@ -25,8 +26,10 @@ class DatabaseConnection:
         self.pool: Optional[asyncpg.Pool] = None
         self._lock = asyncio.Lock()
     
+    @retry(max_attempts=5, initial_delay=1.0, max_delay=30.0)
+    @circuit_breaker("database_connection", failure_threshold=3, recovery_timeout=30)
     async def connect(self) -> None:
-        """创建连接池"""
+        """创建连接池 - 带重试和断路器保护"""
         async with self._lock:
             if self.pool is not None:
                 return
@@ -47,6 +50,9 @@ class DatabaseConnection:
                 # 初始化数据库结构
                 await self._initialize_schema()
                 
+            except CircuitBreakerOpenError:
+                logger.error("数据库连接断路器已打开，拒绝连接")
+                raise
             except Exception as e:
                 logger.error(f"创建数据库连接池失败：{e}")
                 raise
@@ -74,8 +80,10 @@ class DatabaseConnection:
         async with self.pool.acquire() as connection:
             yield connection
     
+    @retry(max_attempts=3, initial_delay=0.5)
+    @circuit_breaker("database_execute", failure_threshold=5, recovery_timeout=60)
     async def execute(self, query: str, *args) -> str:
-        """执行SQL语句
+        """执行SQL语句 - 带重试和断路器保护
         
         Args:
             query: SQL语句
@@ -87,8 +95,10 @@ class DatabaseConnection:
         async with self.acquire() as conn:
             return await conn.execute(query, *args)
     
+    @retry(max_attempts=3, initial_delay=0.5)
+    @circuit_breaker("database_fetch", failure_threshold=5, recovery_timeout=60)
     async def fetch(self, query: str, *args) -> list:
-        """查询多条记录
+        """查询多条记录 - 带重试和断路器保护
         
         Args:
             query: SQL查询语句
@@ -100,8 +110,10 @@ class DatabaseConnection:
         async with self.acquire() as conn:
             return await conn.fetch(query, *args)
     
+    @retry(max_attempts=3, initial_delay=0.5)
+    @circuit_breaker("database_fetchrow", failure_threshold=5, recovery_timeout=60)
     async def fetchrow(self, query: str, *args) -> Optional[asyncpg.Record]:
-        """查询单条记录
+        """查询单条记录 - 带重试和断路器保护
         
         Args:
             query: SQL查询语句
@@ -113,8 +125,10 @@ class DatabaseConnection:
         async with self.acquire() as conn:
             return await conn.fetchrow(query, *args)
     
+    @retry(max_attempts=3, initial_delay=0.5)
+    @circuit_breaker("database_fetchval", failure_threshold=5, recovery_timeout=60)
     async def fetchval(self, query: str, *args) -> Any:
-        """查询单个值
+        """查询单个值 - 带重试和断路器保护
         
         Args:
             query: SQL查询语句
@@ -166,3 +180,11 @@ class DatabaseConnection:
             # ''')
             
             logger.info("数据库模式初始化完成")
+    
+    async def close(self) -> None:
+        """关闭连接池"""
+        async with self._lock:
+            if self.pool is not None:
+                await self.pool.close()
+                self.pool = None
+                logger.info("数据库连接池已关闭")

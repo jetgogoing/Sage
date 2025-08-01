@@ -27,20 +27,17 @@ from mcp.types import (
     TextContent,
     ServerCapabilities,
     ToolsCapability,
-    PromptMessage,
-    Prompt,
-    GetPromptResult,
-    PromptsCapability,
     Resource,
     ResourcesCapability,
     ResourceContents
 )
 
 # Import sage_core
-from sage_core import SageCore, MemoryContent, SearchOptions
+from sage_core import MemoryContent, SearchOptions
+from sage_core.singleton_manager import get_sage_core
 
-# Configure logging - use container log path
-log_dir = os.environ.get('SAGE_LOG_DIR', '/var/log/sage')
+# Configure logging - use local log path
+log_dir = os.environ.get('SAGE_LOG_DIR', '/Users/jet/Sage/logs')
 os.makedirs(log_dir, exist_ok=True)
 
 logging.basicConfig(
@@ -56,7 +53,7 @@ class SageMCPStdioServerV3:
     
     def __init__(self):
         self.server = Server("sage")
-        self.sage_core = SageCore()
+        self.sage_core = None  # 延迟初始化
         self._register_handlers()
         logger.info("Sage MCP stdio server v3 initialized")
         
@@ -70,7 +67,7 @@ class SageMCPStdioServerV3:
             
             return [
                 Tool(
-                    name="save_conversation",
+                    name="S",
                     description="保存用户和助手的对话到记忆系统",
                     inputSchema={
                         "type": "object",
@@ -105,36 +102,7 @@ class SageMCPStdioServerV3:
                             "max_results": {
                                 "type": "integer",
                                 "description": "最大返回结果数",
-                                "default": 10
-                            }
-                        },
-                        "required": ["query"]
-                    }
-                ),
-                Tool(
-                    name="search_memory",
-                    description="搜索记忆库中的历史对话",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "query": {
-                                "type": "string",
-                                "description": "搜索查询"
-                            },
-                            "limit": {
-                                "type": "integer",
-                                "description": "返回结果数量限制",
-                                "default": 10
-                            },
-                            "strategy": {
-                                "type": "string",
-                                "description": "搜索策略",
-                                "enum": ["default", "semantic", "recent"],
-                                "default": "default"
-                            },
-                            "session_id": {
-                                "type": "string",
-                                "description": "可选的会话ID过滤"
+                                "default": int(os.getenv("SAGE_MAX_RESULTS", "10"))
                             }
                         },
                         "required": ["query"]
@@ -160,25 +128,6 @@ class SageMCPStdioServerV3:
                     }
                 ),
                 Tool(
-                    name="analyze_memory",
-                    description="分析记忆库，生成洞察和模式",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "session_id": {
-                                "type": "string",
-                                "description": "要分析的会话ID（可选）"
-                            },
-                            "analysis_type": {
-                                "type": "string",
-                                "description": "分析类型",
-                                "enum": ["general", "patterns", "insights"],
-                                "default": "general"
-                            }
-                        }
-                    }
-                ),
-                Tool(
                     name="generate_prompt",
                     description="基于上下文生成智能提示",
                     inputSchema={
@@ -199,26 +148,6 @@ class SageMCPStdioServerV3:
                     }
                 ),
                 Tool(
-                    name="export_session",
-                    description="导出会话数据",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "session_id": {
-                                "type": "string",
-                                "description": "要导出的会话ID"
-                            },
-                            "format": {
-                                "type": "string",
-                                "description": "导出格式",
-                                "enum": ["json", "markdown"],
-                                "default": "json"
-                            }
-                        },
-                        "required": ["session_id"]
-                    }
-                ),
-                Tool(
                     name="get_status",
                     description="获取 Sage 服务状态",
                     inputSchema={
@@ -234,11 +163,11 @@ class SageMCPStdioServerV3:
             logger.info(f"Handling call_tool request: {name}")
             
             try:
-                # 确保服务已初始化
-                if not self.sage_core._initialized:
-                    await self.sage_core.initialize({})
+                # 确保获取单例实例
+                if self.sage_core is None:
+                    self.sage_core = await get_sage_core({})
                 
-                if name == "save_conversation":
+                if name == "S":
                     content = MemoryContent(
                         user_input=arguments["user_prompt"],
                         assistant_response=arguments["assistant_response"],
@@ -251,39 +180,13 @@ class SageMCPStdioServerV3:
                     )]
                 
                 elif name == "get_context":
+                    # 从环境变量读取默认值
+                    default_max_results = int(os.getenv("SAGE_MAX_RESULTS", "10"))
                     context = await self.sage_core.get_context(
                         query=arguments["query"],
-                        max_results=arguments.get("max_results", 10)
+                        max_results=arguments.get("max_results", default_max_results)
                     )
                     return [TextContent(type="text", text=context)]
-                
-                elif name == "search_memory":
-                    options = SearchOptions(
-                        limit=arguments.get("limit", 10),
-                        strategy=arguments.get("strategy", "default"),
-                        session_id=arguments.get("session_id")
-                    )
-                    results = await self.sage_core.search_memory(
-                        query=arguments["query"],
-                        options=options
-                    )
-                    
-                    # 格式化结果
-                    if results:
-                        output_lines = [f"找到 {len(results)} 条相关记忆：\n"]
-                        for i, memory in enumerate(results, 1):
-                            output_lines.append(f"\n[记忆 {i}]")
-                            output_lines.append(f"时间: {memory['created_at']}")
-                            if 'similarity' in memory:
-                                output_lines.append(f"相关度: {memory['similarity']:.2f}")
-                            output_lines.append(f"用户: {memory['user_input']}")
-                            output_lines.append(f"助手: {memory['assistant_response']}")
-                            output_lines.append("-" * 40)
-                        output = "\n".join(output_lines)
-                    else:
-                        output = "没有找到相关记忆"
-                    
-                    return [TextContent(type="text", text=output)]
                 
                 elif name == "manage_session":
                     session_info = await self.sage_core.manage_session(
@@ -306,57 +209,12 @@ class SageMCPStdioServerV3:
                     output = "\n".join(output_lines)
                     return [TextContent(type="text", text=output)]
                 
-                elif name == "analyze_memory":
-                    analysis = await self.sage_core.analyze_memory(
-                        session_id=arguments.get("session_id"),
-                        analysis_type=arguments.get("analysis_type", "general")
-                    )
-                    
-                    output_lines = ["记忆分析结果:\n"]
-                    
-                    if analysis.patterns:
-                        output_lines.append("\n发现的模式:")
-                        for pattern in analysis.patterns:
-                            output_lines.append(f"  - {pattern['description']}: {pattern['data']}")
-                    
-                    if analysis.insights:
-                        output_lines.append("\n洞察:")
-                        for insight in analysis.insights:
-                            output_lines.append(f"  - {insight}")
-                    
-                    if analysis.suggestions:
-                        output_lines.append("\n建议:")
-                        for suggestion in analysis.suggestions:
-                            output_lines.append(f"  - {suggestion}")
-                    
-                    output = "\n".join(output_lines)
-                    return [TextContent(type="text", text=output)]
-                
                 elif name == "generate_prompt":
                     prompt = await self.sage_core.generate_prompt(
                         context=arguments["context"],
                         style=arguments.get("style", "default")
                     )
                     return [TextContent(type="text", text=prompt)]
-                
-                elif name == "export_session":
-                    data = await self.sage_core.export_session(
-                        session_id=arguments["session_id"],
-                        format=arguments.get("format", "json")
-                    )
-                    
-                    # 将字节数据转换为字符串
-                    output = data.decode('utf-8')
-                    
-                    if arguments.get("format") == "json":
-                        # 格式化 JSON 输出
-                        try:
-                            json_data = json.loads(output)
-                            output = json.dumps(json_data, indent=2, ensure_ascii=False)
-                        except:
-                            pass
-                    
-                    return [TextContent(type="text", text=output)]
                 
                 elif name == "get_status":
                     status = await self.sage_core.get_status()
@@ -373,169 +231,6 @@ class SageMCPStdioServerV3:
                     text=f"执行失败: {str(e)}"
                 )]
                 
-        @self.server.list_prompts()
-        async def handle_list_prompts() -> List[Prompt]:
-            """列出可用的提示模板"""
-            logger.info("Handling list_prompts request")
-            
-            return [
-                Prompt(
-                    name="auto_context_injection",
-                    description="自动注入相关历史上下文的提示模板",
-                    arguments=[
-                        {
-                            "name": "user_input",
-                            "description": "用户的输入内容",
-                            "required": True
-                        }
-                    ]
-                ),
-                Prompt(
-                    name="smart_suggestion",
-                    description="基于历史记忆生成智能建议",
-                    arguments=[
-                        {
-                            "name": "topic",
-                            "description": "话题或主题",
-                            "required": True
-                        }
-                    ]
-                ),
-                Prompt(
-                    name="memory_summary",
-                    description="生成记忆摘要",
-                    arguments=[
-                        {
-                            "name": "session_id",
-                            "description": "会话ID（可选）",
-                            "required": False
-                        },
-                        {
-                            "name": "limit",
-                            "description": "摘要的记忆数量",
-                            "required": False
-                        }
-                    ]
-                )
-            ]
-            
-        @self.server.get_prompt()
-        async def handle_get_prompt(name: str, arguments: Dict[str, Any]) -> GetPromptResult:
-            """获取提示模板内容"""
-            logger.info(f"Handling get_prompt request: {name}")
-            
-            # 确保服务已初始化
-            if not self.sage_core._initialized:
-                await self.sage_core.initialize({})
-            
-            if name == "auto_context_injection":
-                user_input = arguments.get("user_input", "")
-                
-                # 获取相关上下文
-                context = await self.sage_core.get_context(user_input, max_results=5)
-                
-                messages = []
-                messages.append(
-                    PromptMessage(
-                        role="user",
-                        content=TextContent(type="text", text=user_input)
-                    )
-                )
-                
-                if context and context != "没有找到相关的历史记忆。":
-                    messages.append(
-                        PromptMessage(
-                            role="assistant",
-                            content=TextContent(
-                                type="text",
-                                text=f"基于以下相关历史记忆：\n\n{context}\n\n请回答用户的问题。"
-                            )
-                        )
-                    )
-                
-                return GetPromptResult(
-                    description="已注入相关历史上下文",
-                    messages=messages
-                )
-            
-            elif name == "smart_suggestion":
-                topic = arguments.get("topic", "")
-                
-                # 搜索相关记忆
-                options = SearchOptions(limit=10, strategy="semantic")
-                memories = await self.sage_core.search_memory(topic, options)
-                
-                # 生成建议
-                suggestion_text = f"关于\"{topic}\"的智能建议：\n\n"
-                
-                if memories:
-                    # 分析记忆中的模式
-                    topics_discussed = set()
-                    for memory in memories:
-                        # 简单的主题提取
-                        words = memory['user_input'].split() + memory['assistant_response'].split()
-                        topics_discussed.update(w for w in words if len(w) > 3)
-                    
-                    suggestion_text += "基于历史对话，您可能对以下方面感兴趣：\n"
-                    for i, topic_word in enumerate(list(topics_discussed)[:5], 1):
-                        suggestion_text += f"{i}. 深入了解{topic_word}\n"
-                else:
-                    suggestion_text += "这是一个新话题，让我们开始探索吧！"
-                
-                # 添加通用建议
-                prompt = await self.sage_core.generate_prompt(topic, style="suggestion")
-                suggestion_text += f"\n{prompt}"
-                
-                return GetPromptResult(
-                    description="基于历史记忆的智能建议",
-                    messages=[
-                        PromptMessage(
-                            role="assistant",
-                            content=TextContent(type="text", text=suggestion_text)
-                        )
-                    ]
-                )
-            
-            elif name == "memory_summary":
-                session_id = arguments.get("session_id")
-                limit = arguments.get("limit", 10)
-                
-                # 获取记忆
-                if session_id:
-                    memories = await self.sage_core.memory_manager.storage.get_session_memories(
-                        session_id, limit=limit
-                    )
-                else:
-                    # 获取最近的记忆
-                    options = SearchOptions(limit=limit, strategy="recent")
-                    memories = await self.sage_core.search_memory("", options)
-                
-                # 生成摘要
-                summary_lines = ["记忆摘要：\n"]
-                
-                if memories:
-                    for i, memory in enumerate(memories, 1):
-                        summary_lines.append(f"{i}. {memory['created_at'][:10]}")
-                        summary_lines.append(f"   Q: {memory['user_input'][:50]}...")
-                        summary_lines.append(f"   A: {memory['assistant_response'][:50]}...")
-                        summary_lines.append("")
-                else:
-                    summary_lines.append("暂无记忆记录")
-                
-                summary_text = "\n".join(summary_lines)
-                
-                return GetPromptResult(
-                    description="记忆摘要",
-                    messages=[
-                        PromptMessage(
-                            role="assistant",
-                            content=TextContent(type="text", text=summary_text)
-                        )
-                    ]
-                )
-            
-            raise ValueError(f"Unknown prompt: {name}")
-        
         @self.server.list_resources()
         async def handle_list_resources() -> List[Resource]:
             """列出可用资源"""
@@ -677,9 +372,6 @@ class SageMCPStdioServerV3:
                     capabilities=ServerCapabilities(
                         tools=ToolsCapability(
                             # 支持工具调用
-                        ),
-                        prompts=PromptsCapability(
-                            # 支持提示模板
                         ),
                         resources=ResourcesCapability(
                             # 支持资源访问

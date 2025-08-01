@@ -47,7 +47,7 @@ class ConfigManager:
                     self.config = json.load(f)
                 logger.info(f"配置已加载：{self.config_path}")
             else:
-                logger.warning(f"配置文件不存在：{self.config_path}")
+                logger.debug(f"配置文件不存在：{self.config_path}")
                 self._create_default_config()
         except Exception as e:
             logger.error(f"加载配置失败：{e}")
