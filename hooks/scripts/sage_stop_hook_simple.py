@@ -15,8 +15,9 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
-# 添加项目路径
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+# 导入HookExecutionContext
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from context import create_hook_context
 
 from sage_core.singleton_manager import get_sage_core
 from sage_core.interfaces import MemoryContent
@@ -40,9 +41,11 @@ logger = logging.getLogger(__name__)
 
 
 class SimpleSageStopHook:
-    """简化的Stop Hook - 直接保存完整对话"""
+    """简化的Stop Hook - 直接保存完整对话 - HookExecutionContext架构版本"""
     
     def __init__(self):
+        # 创建执行上下文
+        self.context = create_hook_context(__file__)
         self.aggregator = HookDataAggregator()
         
     def extract_conversation_from_file(self, file_path: str) -> Optional[Dict[str, Any]]:

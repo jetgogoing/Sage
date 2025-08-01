@@ -11,10 +11,15 @@ import logging
 import time
 from typing import Dict, Any, Optional
 
-# 添加父目录到路径以导入 sage_client
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+# 导入HookExecutionContext
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from context import create_hook_context
 
-from sage_client import SageClient, is_daemon_running
+# 使用HookExecutionContext后设置Python路径
+from pathlib import Path
+
+# 需要在create_hook_context后才能导入sage_client
+# from sage_client import SageClient, is_daemon_running
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -52,27 +57,40 @@ def extract_conversation_from_file(file_path: str) -> Optional[Dict[str, Any]]:
     return None
 
 
-def save_to_sage(conversation: Dict[str, Any]) -> bool:
-    """保存对话到 Sage"""
-    start_time = time.time()
+class LightweightSageStopHook:
+    """轻量级Sage Stop Hook - HookExecutionContext架构版本"""
     
-    try:
-        # 检查守护进程状态
-        if not is_daemon_running():
-            logger.error("Sage 守护进程未运行")
-            # 可以选择启动守护进程或回退到直接调用
-            return False
+    def __init__(self):
+        # 创建执行上下文
+        self.context = create_hook_context(__file__)
+    
+    def save_to_sage(self, conversation: Dict[str, Any]) -> bool:
+        """保存对话到 Sage"""
+        start_time = time.time()
         
-        # 使用客户端保存
-        with SageClient(timeout=10.0) as client:
-            response = client.save_memory(
-                user_input=conversation["user_input"],
-                assistant_response=conversation["assistant_response"],
-                metadata={
-                    "source": "stop_hook_lightweight",
-                    "timestamp": time.time(),
-                    "processing_time": time.time() - start_time
-                }
+        try:
+            # 设置Python路径
+            self.context.setup_python_path()
+            
+            # 现在可以安全导入sage_client
+            from sage_client import SageClient, is_daemon_running
+            
+            # 检查守护进程状态
+            if not is_daemon_running():
+                logger.error("Sage 守护进程未运行")
+                # 可以选择启动守护进程或回退到直接调用
+                return False
+            
+            # 使用客户端保存
+            with SageClient(timeout=10.0) as client:
+                response = client.save_memory(
+                    user_input=conversation["user_input"],
+                    assistant_response=conversation["assistant_response"],
+                    metadata={
+                        "source": "stop_hook_lightweight",
+                        "timestamp": time.time(),
+                        "processing_time": time.time() - start_time
+                    }
             )
             
             if response.get('status') == 'ok':
@@ -109,11 +127,14 @@ def main():
         logger.warning("未找到有效的对话内容")
         sys.exit(0)
     
+    # 创建轻量级hook实例
+    hook = LightweightSageStopHook()
+    
     logger.info(f"提取到对话: 用户输入长度={len(conversation['user_input'])}, "
                 f"助手响应长度={len(conversation['assistant_response'])}")
     
     # 保存到 Sage
-    success = save_to_sage(conversation)
+    success = hook.save_to_sage(conversation)
     
     # 返回状态码
     sys.exit(0 if success else 1)

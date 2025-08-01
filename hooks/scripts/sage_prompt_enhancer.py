@@ -18,31 +18,32 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
+# 导入HookExecutionContext
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from context import create_hook_context
+
 from security_utils import path_validator, input_validator, resource_limiter, SecurityError
 
 
 class SagePromptEnhancer:
-    """Sage 提示增强器"""
+    """Sage 提示增强器 - HookExecutionContext架构版本"""
     
     def __init__(self):
+        # 创建执行上下文
+        self.context = create_hook_context(__file__)
+        
         self.timeout = 45  # 留15秒缓冲给 Claude CLI
         self.max_context_turns = 3  # 最多提取3轮对话作为上下文
         self.setup_logging()
     
     def setup_logging(self):
-        """设置日志配置"""
-        log_dir = Path("/Users/jet/Sage/hooks/logs")
-        log_dir.mkdir(exist_ok=True)
-        
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_dir / "prompt_enhancer.log"),
-                logging.StreamHandler(sys.stderr)  # 错误信息输出到 stderr，不影响 stdout
-            ]
+        """设置日志配置 - 使用HookExecutionContext"""
+        # 使用上下文提供的标准化日志设置
+        self.logger = self.context.setup_logging(
+            logger_name='SagePromptEnhancer',
+            log_filename='prompt_enhancer.log'
         )
-        self.logger = logging.getLogger("sage_prompt_enhancer")
+        self.logger.setLevel(logging.DEBUG)
     
     def parse_input(self) -> Dict[str, Any]:
         """解析 Hook 输入数据"""
@@ -150,35 +151,21 @@ class SagePromptEnhancer:
             return ""
     
     def _call_real_sage_mcp(self, context: str) -> str:
-        """真实的 Sage 调用 - 直接调用sage_core"""
+        """真实的 Sage 调用 - 直接调用sage_core - 使用HookExecutionContext"""
         try:
-            # 直接调用 sage_core 而不是通过 subprocess
-            import sys
-            import asyncio
-            from pathlib import Path
+            # 使用上下文设置Python路径
+            self.context.setup_python_path()
             
-            # 动态计算项目根目录 - 跨平台兼容
-            script_path = Path(__file__).resolve()
-            sage_root = script_path.parent.parent.parent
-            sys.path.insert(0, str(sage_root))
+            import asyncio
             
             async def call_sage_core():
                 from sage_core.singleton_manager import get_sage_core
+                from sage_core.interfaces.core_service import MemoryContent
+                
+                # 使用上下文获取配置
+                config = self.context.get_sage_config()
+                
                 sage = await get_sage_core()
-                # 添加必需的配置参数，与其他hooks保持一致
-                config = {
-                    "database": {
-                        "host": os.getenv("DB_HOST", "localhost"),
-                        "port": int(os.getenv("DB_PORT", "5432")),
-                        "database": os.getenv("DB_NAME", "sage_memory"),
-                        "user": os.getenv("DB_USER", "sage"),
-                        "password": os.getenv("DB_PASSWORD", "sage123")
-                    },
-                    "embedding": {
-                        "model": os.getenv("EMBEDDING_MODEL", "Qwen/Qwen3-Embedding-8B"),
-                        "device": os.getenv("EMBEDDING_DEVICE", "cpu")
-                    }
-                }
                 await sage.initialize(config)
                 return await sage.generate_prompt(context, "default")
             

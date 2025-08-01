@@ -18,13 +18,21 @@ import hashlib
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 import logging
+
+# 导入HookExecutionContext
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from context import create_hook_context
+
 from temp_file_cleaner import get_cleaner
 from file_lock import JsonFileLock
 
 class SagePostToolCapture:
-    """工具执行后结果捕获器"""
+    """工具执行后结果捕获器 - HookExecutionContext架构版本"""
     
     def __init__(self):
+        # 创建执行上下文
+        self.context = create_hook_context(__file__)
+        
         # 设置用户级临时目录
         self.temp_dir = Path.home() / '.sage_hooks_temp'
         self.temp_dir.mkdir(exist_ok=True)

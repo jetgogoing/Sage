@@ -19,30 +19,31 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 
+# 导入HookExecutionContext
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from context import create_hook_context
+
 from security_utils import path_validator, input_validator, resource_limiter, SecurityError
 
 
 class SageArchiver:
-    """Sage 对话归档器"""
+    """Sage 对话归档器 - HookExecutionContext架构版本"""
     
     def __init__(self):
+        # 创建执行上下文
+        self.context = create_hook_context(__file__)
+        
         self.timeout = 30  # 归档操作超时时间
         self.setup_logging()
     
     def setup_logging(self):
-        """设置日志配置"""
-        log_dir = Path("/Users/jet/Sage/hooks/logs")
-        log_dir.mkdir(exist_ok=True)
-        
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_dir / "archiver.log"),
-                logging.StreamHandler(sys.stderr)
-            ]
+        """设置日志配置 - 使用HookExecutionContext"""
+        # 使用上下文提供的标准化日志设置
+        self.logger = self.context.setup_logging(
+            logger_name='SageArchiver',
+            log_filename='archiver.log'
         )
-        self.logger = logging.getLogger("sage_archiver")
+        self.logger.setLevel(logging.DEBUG)
     
     def parse_input(self) -> Dict[str, Any]:
         """解析 Hook 输入数据"""
@@ -212,24 +213,23 @@ class SageArchiver:
             return False
     
     def _call_real_sage_core(self, user_prompt: str, assistant_response: str, metadata: Dict[str, Any]) -> bool:
-        """真实的 Sage Core 调用 - 直接调用sage_core.save_memory"""
+        """真实的 Sage Core 调用 - 直接调用sage_core.save_memory - 使用HookExecutionContext"""
         start_time = time.time()
         try:
-            # 直接调用 sage_core 而不是通过 subprocess
-            import sys
-            import asyncio
-            from pathlib import Path
+            # 使用上下文设置Python路径
+            self.context.setup_python_path()
             
-            # 动态计算项目根目录 - 跨平台兼容
-            script_path = Path(__file__).resolve()
-            sage_root = script_path.parent.parent.parent
-            sys.path.insert(0, str(sage_root))
+            import asyncio
             
             async def save_to_sage_core():
                 from sage_core.singleton_manager import get_sage_core
                 from sage_core.interfaces.core_service import MemoryContent
                 
-                sage = await get_sage_core({})
+                # 使用上下文获取配置
+                config = self.context.get_sage_config()
+                
+                sage = await get_sage_core()
+                await sage.initialize(config)
                 
                 # 构建MemoryContent对象
                 content = MemoryContent(
@@ -278,12 +278,10 @@ class SageArchiver:
             return False
 
     def _simulate_sage_save(self, user_prompt: str, assistant_response: str, metadata: Dict[str, Any]) -> bool:
-        """模拟 Sage MCP Save 调用 - 实际实现中需要替换"""
+        """本地备份完整交互数据 - 使用HookExecutionContext"""
         try:
-            # 这是一个模拟实现，实际应该调用真实的 Sage MCP Server
-            # 这里可以将数据写入本地文件作为备份
-            backup_dir = Path("/Users/jet/Sage/hooks/logs/backup")
-            backup_dir.mkdir(exist_ok=True)
+            # 使用上下文获取备份目录
+            backup_dir = self.context.get_backup_dir()
             
             backup_data = {
                 'timestamp': metadata['timestamp'],
