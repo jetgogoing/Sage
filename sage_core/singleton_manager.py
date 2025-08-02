@@ -164,8 +164,8 @@ class SageCoreSingleton:
                 try:
                     loop = asyncio.get_event_loop()
                     if loop.is_running():
-                        # 如果在异步上下文中，创建任务
-                        asyncio.create_task(cls._instance.shutdown())
+                        # 如果在异步上下文中，警告并跳过清理
+                        logger.warning("在运行中的事件循环中调用reset，跳过异步清理以避免资源泄漏")
                     else:
                         # 如果不在异步上下文中，同步运行
                         loop.run_until_complete(cls._instance.shutdown())

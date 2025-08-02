@@ -92,26 +92,47 @@ class MemoryManager:
     @retry(max_attempts=3, initial_delay=0.5)
     @circuit_breaker("memory_save", failure_threshold=5, recovery_timeout=60)
     async def _save_without_transaction(self, content: MemoryContent) -> str:
-        """不使用事务保存记忆 - 带重试和断路器保护"""
+        """使用显式事务保存记忆 - 确保原子性"""
         try:
-            # 合并用户输入和助手回复进行向量化
-            combined_text = f"{content.user_input}\n{content.assistant_response}"
-            embedding = await self._vectorize_with_protection(combined_text)
-            
-            # 使用当前会话ID（如果内容中没有指定）
-            session_id = content.session_id or self.current_session_id
-            
-            # 保存到存储
-            memory_id = await self.storage.save(
-                user_input=content.user_input,
-                assistant_response=content.assistant_response,
-                embedding=embedding,
-                metadata=content.metadata,
-                session_id=session_id
-            )
-            
-            logger.info(f"记忆已保存：{memory_id}")
-            return memory_id
+            # 如果有事务管理器，使用事务保存
+            if self.transaction_manager:
+                async with self.transaction_manager.transaction() as conn:
+                    # 合并用户输入和助手回复进行向量化
+                    combined_text = f"{content.user_input}\n{content.assistant_response}"
+                    embedding = await self._vectorize_with_protection(combined_text)
+                    
+                    # 使用当前会话ID（如果内容中没有指定）
+                    session_id = content.session_id or self.current_session_id
+                    
+                    # 在同一事务中保存
+                    memory_id = await self.storage.save(
+                        user_input=content.user_input,
+                        assistant_response=content.assistant_response,
+                        embedding=embedding,
+                        metadata=content.metadata,
+                        session_id=session_id,
+                        _transaction_conn=conn
+                    )
+                    
+                    logger.info(f"记忆已原子保存：{memory_id}")
+                    return memory_id
+            else:
+                # 降级到无事务模式
+                combined_text = f"{content.user_input}\n{content.assistant_response}"
+                embedding = await self._vectorize_with_protection(combined_text)
+                
+                session_id = content.session_id or self.current_session_id
+                
+                memory_id = await self.storage.save(
+                    user_input=content.user_input,
+                    assistant_response=content.assistant_response,
+                    embedding=embedding,
+                    metadata=content.metadata,
+                    session_id=session_id
+                )
+                
+                logger.info(f"记忆已保存（无事务）：{memory_id}")
+                return memory_id
             
         except CircuitBreakerOpenError:
             logger.error("记忆保存断路器已打开，拒绝请求")
@@ -223,7 +244,7 @@ class MemoryManager:
             if not memories:
                 return "没有找到相关的历史记忆。"
             
-            # 格式化上下文
+            # 格式化上下文 - 增强版，包含更多有价值的信息
             context_parts = ["相关历史记忆：\n"]
             
             for i, memory in enumerate(memories, 1):
@@ -231,8 +252,54 @@ class MemoryManager:
                 context_parts.append(f"时间：{memory['created_at']}")
                 if 'similarity' in memory:
                     context_parts.append(f"相关度：{memory['similarity']:.2f}")
-                context_parts.append(f"用户：{memory['user_input']}")
-                context_parts.append(f"助手：{memory['assistant_response']}")
+                
+                # 提取元数据中的有用信息
+                metadata = memory.get('metadata', {})
+                if metadata:
+                    # 显示会话信息
+                    if metadata.get('session_id'):
+                        context_parts.append(f"会话ID：{metadata['session_id'][:8]}...")
+                    
+                    # 显示消息统计
+                    if metadata.get('message_count'):
+                        context_parts.append(f"消息数：{metadata['message_count']}")
+                    
+                    # 显示工具调用信息
+                    if metadata.get('tool_call_count'):
+                        context_parts.append(f"工具调用：{metadata['tool_call_count']}次")
+                        
+                    # 显示具体的工具调用（如果有）
+                    tool_calls = metadata.get('tool_calls', [])
+                    if tool_calls:
+                        tool_names = [tc.get('tool_name', 'unknown') for tc in tool_calls[:3]]  # 最多显示3个
+                        if tool_names:
+                            context_parts.append(f"使用工具：{', '.join(tool_names)}")
+                    
+                    # 显示处理格式
+                    if metadata.get('format'):
+                        context_parts.append(f"来源格式：{metadata['format']}")
+                
+                # 智能显示对话内容
+                user_input = memory.get('user_input', '').strip()
+                assistant_response = memory.get('assistant_response', '').strip()
+                
+                # 处理空内容的情况
+                if not user_input and not assistant_response:
+                    context_parts.append("内容：（空记录）")
+                elif not user_input:
+                    # 只有助手回复（可能是工具调用结果）
+                    if assistant_response.startswith("Tool execution result"):
+                        context_parts.append(f"工具执行结果：{assistant_response[22:].strip()}")
+                    else:
+                        context_parts.append(f"助手：{assistant_response[:200]}{'...' if len(assistant_response) > 200 else ''}")
+                elif not assistant_response:
+                    # 只有用户输入
+                    context_parts.append(f"用户：{user_input[:200]}{'...' if len(user_input) > 200 else ''}")
+                else:
+                    # 完整对话
+                    context_parts.append(f"用户：{user_input[:150]}{'...' if len(user_input) > 150 else ''}")
+                    context_parts.append(f"助手：{assistant_response[:150]}{'...' if len(assistant_response) > 150 else ''}")
+                
                 context_parts.append("-" * 40)
             
             return "\n".join(context_parts)

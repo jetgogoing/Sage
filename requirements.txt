@@ -1,20 +1,66 @@
-# Minimal dependencies for Sage MCP Single Container
-# No ML models - uses hash vectorization
+# Sage MCP 智能记忆管理系统依赖文件
+# 基于全面代码分析生成的完整依赖列表
 
-# MCP SDK
+# ================================
+# 核心运行时依赖
+# ================================
+
+# MCP 协议支持
 mcp>=1.1.0
 
-# Database
-asyncpg>=0.29.0
-# Note: pgvector Python package is optional for hash vectorization
+# 数据库访问
+asyncpg>=0.29.0          # PostgreSQL 异步连接
+psycopg2-binary>=2.9.0   # PostgreSQL 同步连接和工具支持
 
-# Core
-numpy>=1.24.0  # Still needed for vector operations
+# 数值计算和向量处理
+numpy>=1.24.0            # 向量操作和数值计算
 
-# Authentication
-PyJWT>=2.8.0
+# HTTP 客户端
+requests>=2.31.0         # SiliconFlow API 调用和 HTTP 请求
 
-# Utilities
-python-dotenv>=1.0.0
-aiofiles>=23.2.1
-requests>=2.31.0  # For HTTP requests in vectorizer
+# 异步 I/O
+aiofiles>=23.2.1         # 异步文件操作
+
+# 认证和安全
+PyJWT>=2.8.0             # JWT token 处理
+
+# 环境配置
+python-dotenv>=1.0.0     # 环境变量加载
+
+# ================================
+# 开发和测试依赖
+# ================================
+
+# 测试框架
+pytest>=7.0.0            # 单元测试框架
+pytest-asyncio>=0.21.0   # 异步测试支持
+
+# 代码质量
+black>=23.0.0            # 代码格式化
+flake8>=6.0.0            # 代码检查
+
+# ================================
+# 可选依赖说明
+# ================================
+
+# 注意：以下模块使用 Python 标准库，无需额外安装：
+# - asyncio (异步编程)
+# - logging (日志记录)
+# - json (JSON 处理)
+# - uuid (UUID 生成)
+# - pathlib (路径处理)
+# - secrets (安全工具)
+# - threading (线程支持)
+# - concurrent.futures (并发执行)
+# - subprocess (子进程管理)
+# - tempfile (临时文件)
+# - time (时间处理)
+# - datetime (日期时间)
+# - os (操作系统接口)
+# - sys (系统特定参数)
+# - typing (类型注解)
+# - dataclasses (数据类)
+# - contextlib (上下文管理)
+# - abc (抽象基类)
+
+# pgvector 扩展在数据库层面安装，Python 包不是必需的

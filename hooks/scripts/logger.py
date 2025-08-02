@@ -205,7 +205,7 @@ class SageLogger:
         # 文件处理器
         if file_enabled:
             try:
-                log_dir = Path("/Users/jet/Sage/hooks/logs")
+                log_dir = Path("/Users/jet/Sage/logs/Hooks")
                 log_dir.mkdir(exist_ok=True)
                 
                 # 验证日志目录路径安全性
@@ -427,4 +427,4 @@ if __name__ == "__main__":
         logger.exception("捕获到异常")
     
     print("✓ 日志测试完成")
-    print("检查日志文件: /Users/jet/Sage/hooks/logs/test_logger.log")
+    print("检查日志文件: /Users/jet/Sage/logs/Hooks/test_logger.log")

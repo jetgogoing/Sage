@@ -150,9 +150,20 @@ class SageCore(ISageService):
             # 1. 获取相关历史记忆 - 激活RAG功能
             step1_start = time.time()
             if context and context.strip():
-                relevant_context = await self.memory_manager.get_context(context, max_results=10)
+                # 从配置读取max_results值
+                memory_fusion_config = self.config_manager.get_memory_fusion_config()
+                max_results = memory_fusion_config.get('max_results', 10)
+                
+                # 验证配置值的有效性
+                if not isinstance(max_results, int) or max_results < 1 or max_results > 100:
+                    logger.warning(f"[RAG流程] SAGE_MAX_RESULTS配置值无效: {max_results}，使用默认值10")
+                    max_results = 10
+                
+                logger.info(f"[RAG流程] 使用SAGE_MAX_RESULTS配置: {max_results}")
+                
+                relevant_context = await self.memory_manager.get_context(context, max_results=max_results)
                 step1_time = time.time() - step1_start
-                logger.info(f"[RAG流程] 步骤1-向量搜索完成: {len(relevant_context)} 字符, 耗时: {step1_time:.3f}秒")
+                logger.info(f"[RAG流程] 步骤1-向量搜索完成: {len(relevant_context)} 字符 (限制{max_results}个结果), 耗时: {step1_time:.3f}秒")
             else:
                 relevant_context = ""
                 logger.info(f"[RAG流程] 步骤1-无输入上下文，跳过向量搜索")
@@ -180,86 +191,146 @@ class SageCore(ISageService):
             return await self._generate_fallback_prompt(style)
     
     async def _apply_memory_fusion(self, relevant_context: str, query_context: str) -> str:
-        """应用Memory Fusion模板压缩上下文"""
+        """直接调用AI压缩上下文 - 简化Memory Fusion逻辑"""
         import time
         start_time = time.time()
         
         try:
             if not relevant_context:
-                logger.info(f"[Memory Fusion] 无相关上下文，直接返回查询内容")
+                logger.info(f"[AI压缩] 无相关上下文，直接返回查询内容")
                 return query_context
             
-            # 读取Memory Fusion模板
-            from pathlib import Path
-            template_path = Path(__file__).parent.parent / "prompts" / "memory_fusion_prompt_programming.txt"
+            # 提取上下文片段用于AI压缩 - 提高质量过滤标准
+            retrieved_chunks = [chunk.strip() for chunk in relevant_context.split('\n') if chunk.strip() and len(chunk.strip()) > 50]
+            logger.info(f"[AI压缩] 准备压缩 {len(retrieved_chunks)} 个上下文片段 (>50字符过滤)")
             
-            template_read_start = time.time()
-            if template_path.exists():
-                with open(template_path, 'r', encoding='utf-8') as f:
-                    template = f.read()
-                template_read_time = time.time() - template_read_start
-                logger.info(f"[Memory Fusion] 模板读取完成: {len(template)} 字符, 耗时: {template_read_time:.3f}秒")
-                
-                # 替换模板中的retrieved_passages占位符
-                fused_template = template.replace("{retrieved_passages}", relevant_context)
-                logger.info(f"[Memory Fusion] 模板占位符替换完成: 融合后长度 {len(fused_template)} 字符")
-                
-                # 调用AI压缩（当前为简化实现）
-                compress_start = time.time()
-                compressed_context = await self._compress_context_with_ai(fused_template, query_context)
-                compress_time = time.time() - compress_start
-                total_time = time.time() - start_time
-                logger.info(f"[Memory Fusion] 上下文压缩完成: {len(compressed_context)} 字符, 耗时: {compress_time:.3f}秒")
-                logger.info(f"[Memory Fusion] 整个Memory Fusion处理完成，总耗时: {total_time:.3f}秒")
-                return compressed_context
-            else:
-                logger.warning(f"[Memory Fusion] 模板文件不存在: {template_path}，使用原始上下文")
-                return f"{relevant_context}\n\n当前查询: {query_context}"
+            # 直接调用AI压缩，让TextGenerator处理模板逻辑
+            compress_start = time.time()
+            compressed_context = await self._compress_context_with_ai("", query_context, retrieved_chunks)
+            compress_time = time.time() - compress_start
+            total_time = time.time() - start_time
+            
+            logger.info(f"[AI压缩] 上下文压缩完成: {len(compressed_context)} 字符, 耗时: {compress_time:.3f}秒")
+            logger.info(f"[AI压缩] 整个处理完成，总耗时: {total_time:.3f}秒")
+            return compressed_context
                 
         except Exception as e:
             total_time = time.time() - start_time
-            logger.error(f"[Memory Fusion] 处理失败: {e}, 耗时: {total_time:.3f}秒")
+            logger.error(f"[AI压缩] 处理失败: {e}, 耗时: {total_time:.3f}秒")
             return relevant_context
     
-    async def _compress_context_with_ai(self, template: str, query: str) -> str:
-        """使用AI模型压缩上下文 - TODO: 集成DeepSeek v2.5 API"""
+    async def _compress_context_with_ai(self, template: str, query: str, retrieved_chunks: List[str] = None) -> str:
+        """使用SiliconFlow QwenLong进行智能上下文压缩"""
         import time
         start_time = time.time()
         
         try:
-            logger.warning(f"[AI压缩] 注意：DeepSeek v2.5 API调用尚未实现，使用本地简化逻辑")
-            logger.info(f"[AI压缩] 开始处理模板，输入长度: {len(template)} 字符")
+            # 检查AI压缩是否启用
+            ai_config = self.config_manager.get_ai_compression_config()
+            if not ai_config.get('enable', True):
+                logger.info(f"[AI压缩] AI压缩功能已禁用，使用降级逻辑")
+                return await self._fallback_context_extraction(template, query)
             
-            # TODO: 实现DeepSeek v2.5 API调用
-            # 目前使用简化的上下文提取逻辑
-            process_start = time.time()
+            logger.info(f"[AI压缩] 开始调用SiliconFlow QwenLong-L1-32B")
+            logger.info(f"[AI压缩] 输入模板长度: {len(template)} 字符，上下文片段: {len(retrieved_chunks or [])} 个")
+            
+            # 初始化TextGenerator
+            from .memory.text_generator import TextGenerator
+            
+            text_generator = TextGenerator(model_name=ai_config.get('model', 'Tongyi-Zhiwen/QwenLong-L1-32B'))
+            await text_generator.initialize()
+            
+            # 使用简化的内置模板，避免文件IO
+            fusion_template = "请基于以下历史上下文和用户查询，生成简洁而相关的记忆背景"
+            logger.info(f"[AI压缩] 使用内置模板进行上下文压缩")
+            
+            # 使用检索到的上下文片段，如果没有则解析template
+            if not retrieved_chunks:
+                # 从template中提取相关内容作为chunks
+                retrieved_chunks = [line.strip() for line in template.split('\n') if line.strip() and len(line.strip()) > 10][:10]
+            
+            # 调用QwenLong进行压缩
+            compression_result = await text_generator.compress_memory_context(
+                fusion_template=fusion_template,
+                user_query=query,
+                retrieved_chunks=retrieved_chunks,
+                max_tokens=ai_config.get('max_tokens', 2000),
+                temperature=ai_config.get('temperature', 0.3),
+                timeout=ai_config.get('timeout_seconds', 30)
+            )
+            
+            total_time = time.time() - start_time
+            logger.info(f"[AI压缩] QwenLong压缩完成: 生成 {len(compression_result)} 字符，耗时: {total_time:.3f}秒")
+            
+            # 验证结果质量
+            if compression_result and len(compression_result.strip()) > 20:
+                return compression_result
+            else:
+                logger.warning(f"[AI压缩] 压缩结果质量不佳，使用降级逻辑")
+                return await self._fallback_context_extraction(template, query)
+            
+        except Exception as e:
+            total_time = time.time() - start_time
+            logger.error(f"[AI压缩] SiliconFlow调用失败: {e}，耗时: {total_time:.3f}秒")
+            
+            # 检查是否允许降级
+            if ai_config.get('fallback_on_error', True):
+                logger.info(f"[AI压缩] 启用降级策略")
+                return await self._fallback_context_extraction(template, query)
+            else:
+                # 不允许降级时直接返回原查询
+                return f"当前查询: {query}"
+    
+    async def _fallback_context_extraction(self, template: str, query: str) -> str:
+        """降级处理：改进的本地上下文提取逻辑"""
+        import time
+        start_time = time.time()
+        
+        try:
+            logger.info(f"[AI压缩] 使用改进的本地上下文提取逻辑")
+            
             lines = template.split('\n')
             relevant_lines = []
             
-            keywords = ['项目', '功能', '问题', '代码', '实现']
-            logger.info(f"[AI压缩] 使用关键词匹配: {keywords}")
+            # 改进的关键词匹配
+            keywords = ['项目', '功能', '问题', '代码', '实现', '技术', '开发', '架构', '设计', '优化']
             
             for line in lines:
-                if any(keyword in line.lower() for keyword in keywords):
-                    relevant_lines.append(line.strip())
+                line_stripped = line.strip()
+                if line_stripped and len(line_stripped) > 5:
+                    # 检查关键词匹配或行长度合适
+                    if any(keyword in line.lower() for keyword in keywords) or len(line_stripped) > 20:
+                        relevant_lines.append(line_stripped)
             
-            process_time = time.time() - process_start
+            # 优先选择包含用户查询关键词的行
+            query_keywords = query.lower().split()[:5]  # 取前5个词
+            priority_lines = []
+            other_lines = []
             
-            if relevant_lines:
-                compressed = '\n'.join(relevant_lines[:10])  # 限制为10行
-                result = f"上下文摘要:\n{compressed}\n\n当前查询: {query}"
+            for line in relevant_lines:
+                if any(keyword in line.lower() for keyword in query_keywords if len(keyword) > 2):
+                    priority_lines.append(line)
+                else:
+                    other_lines.append(line)
+            
+            # 组合结果：优先级行 + 其他行，总计不超过10行
+            final_lines = (priority_lines + other_lines)[:10]
+            
+            if final_lines:
+                compressed = '\n'.join(final_lines)
+                result = f"基于历史记忆的技术背景：\n{compressed}\n\n针对您的查询：{query}"
                 total_time = time.time() - start_time
-                logger.info(f"[AI压缩] 本地关键词匹配完成: 提取 {len(relevant_lines)} 行，输出 {len(result)} 字符，处理耗时: {process_time:.3f}秒，总耗时: {total_time:.3f}秒")
+                logger.info(f"[AI压缩] 本地提取完成: 提取 {len(final_lines)} 行，输出 {len(result)} 字符，耗时: {total_time:.3f}秒")
                 return result
             else:
                 total_time = time.time() - start_time
-                logger.info(f"[AI压缩] 无匹配内容，返回原查询，总耗时: {total_time:.3f}秒")
-                return f"当前查询: {query}"
+                logger.info(f"[AI压缩] 无相关内容，返回基础提示，耗时: {total_time:.3f}秒")
+                return f"我可以基于您的技术背景为您提供专业建议。当前查询：{query}"
                 
         except Exception as e:
             total_time = time.time() - start_time
-            logger.error(f"[AI压缩] 本地处理失败: {e}，总耗时: {total_time:.3f}秒")
-            return query
+            logger.error(f"[AI压缩] 降级处理失败: {e}，耗时: {total_time:.3f}秒")
+            return f"我可以帮您分析技术问题。您的查询：{query}"
     
     async def _generate_contextual_prompt(self, context: str, style: str) -> str:
         """基于上下文和风格生成智能提示"""
@@ -269,7 +340,14 @@ class SageCore(ISageService):
                 # 没有相关上下文时的通用提示
                 return "我来为您提供帮助。请告诉我您需要了解什么。"
             
-            # 从上下文中提取关键信息生成个性化提示
+            # 检查是否是AI压缩生成的智能内容
+            # AI压缩的内容通常较长且包含结构化信息
+            if len(context) > 100 and ("记忆背景" in context or "当前" in context or "集成" in context or "执行计划" in context):
+                logger.info(f"[RAG流程] 检测到AI压缩内容，直接返回: {len(context)} 字符")
+                # 这是AI压缩生成的智能背景，直接返回
+                return context
+            
+            # 对于较短或未经AI处理的上下文，使用原有的关键词匹配逻辑
             context_lower = context.lower()
             
             # 分析上下文中的主要话题

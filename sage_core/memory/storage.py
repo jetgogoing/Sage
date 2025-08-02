@@ -48,6 +48,77 @@ class MemoryStorage(IMemoryProvider, TransactionalStorage):
                    session_id: Optional[str] = None, **kwargs) -> str:
         """保存记忆到数据库 - 带重试和断路器保护"""
         try:
+            # 数据完整性验证 - 改进逻辑以支持单边消息
+            if not user_input and not assistant_response:
+                raise ValueError("user_input 和 assistant_response 不能同时为空")
+            
+            # 至少需要一个非空内容
+            if user_input and not user_input.strip() and assistant_response and not assistant_response.strip():
+                raise ValueError("user_input 和 assistant_response 不能同时为空字符串")
+            
+            if embedding is None:
+                raise ValueError("embedding 不能为 None")
+            
+            if not hasattr(embedding, 'tolist'):
+                raise ValueError("embedding 必须是 numpy array 或具有 tolist 方法的对象")
+            
+            if session_id is not None and (not isinstance(session_id, str) or not session_id.strip()):
+                raise ValueError("session_id 必须是非空字符串或 None")
+            
+            # 生成内容哈希用于去重 - 增强版本
+            import hashlib
+            from datetime import datetime, timezone
+            
+            # 基础内容哈希
+            content_for_hash = f"{user_input or ''}{assistant_response or ''}"
+            content_hash = hashlib.sha256(content_for_hash.encode('utf-8')).hexdigest()
+            
+            # 时间窗口哈希（每小时为一个窗口）
+            time_window = datetime.now(timezone.utc).strftime("%Y%m%d%H")
+            time_aware_hash = hashlib.sha256(f"{content_for_hash}{time_window}".encode('utf-8')).hexdigest()
+            
+            # 检查是否已存在相同内容的记录（在近期时间窗口内）
+            existing_query = '''
+                SELECT id, created_at, metadata FROM memories 
+                WHERE (
+                    metadata->>'content_hash' = $1 
+                    OR metadata->>'time_aware_hash' = $2
+                )
+                AND session_id = $3
+                AND created_at > NOW() - INTERVAL '2 hours'
+                ORDER BY created_at DESC
+                LIMIT 1
+            '''
+            
+            # 根据连接类型执行查询
+            if self._transaction_manager and '_transaction_conn' in kwargs:
+                conn = kwargs['_transaction_conn']
+                existing_record = await conn.fetchrow(existing_query, content_hash, time_aware_hash, session_id)
+            else:
+                existing_record = await self.db.fetchrow(existing_query, content_hash, time_aware_hash, session_id)
+            
+            if existing_record:
+                # 检查是否为真正的重复记录
+                existing_metadata = json.loads(existing_record['metadata']) if existing_record['metadata'] else {}
+                
+                # 如果是时间窗口内的相同内容，检查是否有新的元数据
+                if metadata and existing_metadata:
+                    # 比较元数据的关键字段
+                    key_fields = ['tool_calls', 'message_count', 'thinking_content']
+                    has_new_info = any(
+                        metadata.get(field) != existing_metadata.get(field) 
+                        for field in key_fields
+                    )
+                    
+                    if has_new_info:
+                        logger.info(f"发现相似内容但有新信息，允许保存: {content_hash[:8]}...")
+                    else:
+                        logger.info(f"跳过重复记录，返回已存在的ID: {existing_record['id']} (hash: {content_hash[:8]}...)")
+                        return str(existing_record['id'])
+                else:
+                    logger.info(f"跳过重复记录，返回已存在的ID: {existing_record['id']} (hash: {content_hash[:8]}...)")
+                    return str(existing_record['id'])
+            
             # 生成记忆ID
             memory_id = str(uuid.uuid4())
             
@@ -55,8 +126,16 @@ class MemoryStorage(IMemoryProvider, TransactionalStorage):
             if metadata is None:
                 metadata = {}
             
+            # 添加内容哈希到元数据
+            metadata['content_hash'] = content_hash
+            metadata['time_aware_hash'] = time_aware_hash
+            metadata['time_window'] = time_window
+            
             # 将向量转换为列表（PostgreSQL pgvector 需要）
-            embedding_list = embedding.tolist()
+            try:
+                embedding_list = embedding.tolist()
+            except (AttributeError, TypeError) as e:
+                raise ValueError(f"embedding 转换失败: {e}")
             
             # 将向量列表转换为 PostgreSQL vector 格式的字符串
             embedding_str = '[' + ','.join(map(str, embedding_list)) + ']'
@@ -398,3 +477,61 @@ class MemoryStorage(IMemoryProvider, TransactionalStorage):
         except Exception as e:
             logger.error(f"获取统计信息失败：{e}")
             raise
+    
+    def _validate_and_optimize_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """验证和优化元数据大小"""
+        if not metadata:
+            return {}
+        
+        # 序列化检查大小
+        metadata_json = json.dumps(metadata, ensure_ascii=False)
+        metadata_size = len(metadata_json.encode('utf-8'))
+        
+        # 设置合理的限制（100KB）
+        MAX_METADATA_SIZE = 100 * 1024
+        
+        if metadata_size > MAX_METADATA_SIZE:
+            logger.warning(f"元数据过大：{metadata_size} bytes，开始优化")
+            
+            # 优化策略
+            optimized_metadata = {}
+            
+            # 保留必要字段
+            essential_fields = [
+                'content_hash', 'time_aware_hash', 'time_window',
+                'session_id', 'message_count', 'tool_call_count'
+            ]
+            
+            for field in essential_fields:
+                if field in metadata:
+                    optimized_metadata[field] = metadata[field]
+            
+            # 压缩大型字段
+            if 'tool_calls' in metadata:
+                tool_calls = metadata['tool_calls']
+                if isinstance(tool_calls, list) and len(tool_calls) > 10:
+                    # 只保留前10个工具调用
+                    optimized_metadata['tool_calls'] = tool_calls[:10]
+                    optimized_metadata['tool_calls_truncated'] = len(tool_calls)
+                else:
+                    optimized_metadata['tool_calls'] = tool_calls
+            
+            # 截断过长的文本字段
+            text_fields = ['thinking_content', 'error_message', 'notes']
+            for field in text_fields:
+                if field in metadata:
+                    value = metadata[field]
+                    if isinstance(value, str) and len(value) > 1000:
+                        optimized_metadata[field] = value[:1000] + "...[truncated]"
+                    else:
+                        optimized_metadata[field] = value
+            
+            # 检查优化后的大小
+            optimized_json = json.dumps(optimized_metadata, ensure_ascii=False)
+            optimized_size = len(optimized_json.encode('utf-8'))
+            
+            logger.info(f"元数据优化完成：{metadata_size} -> {optimized_size} bytes")
+            
+            return optimized_metadata
+        
+        return metadata

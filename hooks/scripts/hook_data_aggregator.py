@@ -45,7 +45,7 @@ class HookDataAggregator:
         
     def setup_logging(self):
         """设置日志配置"""
-        log_dir = Path("/Users/jet/Sage/hooks/logs")
+        log_dir = Path("/Users/jet/Sage/logs/Hooks")
         log_dir.mkdir(parents=True, exist_ok=True)
         
         log_file = log_dir / "data_aggregator.log"

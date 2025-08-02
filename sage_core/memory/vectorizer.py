@@ -43,11 +43,13 @@ class TextVectorizer:
         logger.info(f"使用 SiliconFlow API 进行向量化：{self.model_name}")
         self._initialized = True
     
-    async def vectorize(self, text: Union[str, List[str]]) -> np.ndarray:
+    async def vectorize(self, text: Union[str, List[str]], enable_chunking: bool = True, chunk_size: int = 8000) -> np.ndarray:
         """将文本转换为向量（使用 SiliconFlow API）
         
         Args:
             text: 输入文本或文本列表
+            enable_chunking: 是否启用智能分块
+            chunk_size: 单个块的大小（字符数）
             
         Returns:
             向量数组 (4096 维)
@@ -63,54 +65,133 @@ class TextVectorizer:
             texts = text
             single_input = False
         
+        # 处理超长文本的分块向量化
+        all_embeddings = []
+        for t in texts:
+            if enable_chunking and len(t) > chunk_size:
+                # 智能分块处理
+                chunks = self._smart_chunk_text(t, chunk_size)
+                chunk_embeddings = []
+                
+                for chunk in chunks:
+                    chunk_embedding = await self._vectorize_single_text(chunk)
+                    chunk_embeddings.append(chunk_embedding)
+                
+                # 聚合块向量（取平均值）
+                aggregated_embedding = np.mean(chunk_embeddings, axis=0)
+                all_embeddings.append(aggregated_embedding)
+                
+                logger.info(f"长文本分块处理：{len(chunks)}个块，原文本{len(t)}字符")
+            else:
+                # 正常单文本向量化
+                embedding = await self._vectorize_single_text(t)
+                all_embeddings.append(embedding)
+        
+        # 转换为 numpy 数组
+        embeddings_np = np.array(all_embeddings, dtype=np.float32)
+        
+        # 如果输入是单个文本，返回一维数组
+        if single_input:
+            return embeddings_np[0]
+        
+        return embeddings_np
+    
+    async def _vectorize_single_text(self, text: str) -> np.ndarray:
+        """向量化单个文本（内部方法）"""
+        
         try:
             headers = {
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
             }
             
-            # 处理批量请求
-            embeddings = []
-            for t in texts:
-                data = {
-                    "model": self.model_name,
-                    "input": t,
-                    "encoding_format": "float"
-                }
-                
-                response = requests.post(
-                    f"{self.base_url}/embeddings",
-                    headers=headers,
-                    json=data,
-                    timeout=30
-                )
-                response.raise_for_status()
-                
-                result = response.json()
-                embedding = result['data'][0]['embedding']
-                
-                # 确保返回 4096 维向量
-                if len(embedding) != 4096:
-                    raise ValueError(f"期望 4096 维向量，但得到 {len(embedding)} 维")
-                
-                embeddings.append(embedding)
+            data = {
+                "model": self.model_name,
+                "input": text,
+                "encoding_format": "float"
+            }
             
-            # 转换为 numpy 数组
-            embeddings_np = np.array(embeddings, dtype=np.float32)
+            response = requests.post(
+                f"{self.base_url}/embeddings",
+                headers=headers,
+                json=data,
+                timeout=30
+            )
+            response.raise_for_status()
             
-            # 如果输入是单个文本，返回一维数组
-            if single_input:
-                return embeddings_np[0]
+            result = response.json()
+            embedding = result['data'][0]['embedding']
             
-            return embeddings_np
+            # 确保返回 4096 维向量
+            if len(embedding) != 4096:
+                raise ValueError(f"期望 4096 维向量，但得到 {len(embedding)} 维")
+            
+            return np.array(embedding, dtype=np.float32)
             
         except Exception as e:
             logger.error(f"API 向量化失败：{e}")
             # 降级到哈希向量化，但使用 4096 维
-            return self._hash_vectorize(text)
+            return self._hash_vectorize_single(text)
+    
+    def _smart_chunk_text(self, text: str, chunk_size: int) -> List[str]:
+        """智能分块文本，保持语义完整性"""
+        if len(text) <= chunk_size:
+            return [text]
+        
+        chunks = []
+        
+        # 优先按段落分割
+        paragraphs = text.split('\n\n')
+        current_chunk = ""
+        
+        for paragraph in paragraphs:
+            # 如果单个段落就超过限制，按句子分割
+            if len(paragraph) > chunk_size:
+                if current_chunk:
+                    chunks.append(current_chunk.strip())
+                    current_chunk = ""
+                
+                # 按句子分割大段落
+                sentences = self._split_sentences(paragraph)
+                for sentence in sentences:
+                    if len(current_chunk) + len(sentence) > chunk_size:
+                        if current_chunk:
+                            chunks.append(current_chunk.strip())
+                        current_chunk = sentence
+                    else:
+                        current_chunk += sentence
+            else:
+                # 正常段落处理
+                if len(current_chunk) + len(paragraph) > chunk_size:
+                    chunks.append(current_chunk.strip())
+                    current_chunk = paragraph
+                else:
+                    current_chunk += ("\n\n" if current_chunk else "") + paragraph
+        
+        if current_chunk.strip():
+            chunks.append(current_chunk.strip())
+        
+        return chunks
+    
+    def _split_sentences(self, text: str) -> List[str]:
+        """按句子分割文本"""
+        import re
+        # 简单的句子分割规则
+        sentences = re.split(r'[.!?\u3002\uff01\uff1f]+', text)
+        return [s.strip() + '.' for s in sentences if s.strip()]
+    
+    def _hash_vectorize_single(self, text: str) -> np.ndarray:
+        """单个文本的哈希向量化（降级方案）"""
+        # 使用哈希函数生成固定长度向量
+        hash_value = hash(text)
+        np.random.seed(abs(hash_value) % (2**32))
+        vector = np.random.randn(4096).astype(np.float32)
+        # 归一化
+        vector = vector / np.linalg.norm(vector)
+        return vector
     
     def _hash_vectorize(self, text: Union[str, List[str]]) -> np.ndarray:
-        """简单的哈希向量化（降级方案）
+        """简单的哈希向量化（降级方案） - 兼容性保留
         
         Args:
             text: 输入文本
@@ -119,26 +200,10 @@ class TextVectorizer:
             4096维向量
         """
         if isinstance(text, str):
-            texts = [text]
-            single_input = True
+            return self._hash_vectorize_single(text)
         else:
-            texts = text
-            single_input = False
-        
-        vectors = []
-        for t in texts:
-            # 使用哈希函数生成固定长度向量
-            hash_value = hash(t)
-            np.random.seed(abs(hash_value) % (2**32))
-            vector = np.random.randn(4096).astype(np.float32)
-            # 归一化
-            vector = vector / np.linalg.norm(vector)
-            vectors.append(vector)
-        
-        result = np.array(vectors)
-        if single_input:
-            return result[0]
-        return result
+            vectors = [self._hash_vectorize_single(t) for t in text]
+            return np.array(vectors)
     
     def get_dimension(self) -> int:
         """获取向量维度"""

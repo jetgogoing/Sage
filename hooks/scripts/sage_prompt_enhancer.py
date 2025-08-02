@@ -100,8 +100,45 @@ class SagePromptEnhancer:
                 if line.strip():
                     try:
                         entry = json.loads(line.strip())
+                        content = ''
+                        
+                        # 支持原有格式
                         if entry.get('type') in ['user_message', 'assistant_message']:
                             content = entry.get('content', '')
+                        # 支持Claude CLI格式
+                        elif entry.get('type') in ['user', 'assistant']:
+                            message = entry.get('message', {})
+                            if isinstance(message, dict):
+                                message_content = message.get('content', [])
+                                # 检查 content 是字符串还是列表
+                                if isinstance(message_content, str):
+                                    # content 是字符串，直接使用
+                                    content = message_content
+                                elif isinstance(message_content, list):
+                                    # content 是列表，按原逻辑处理
+                                    content_parts = []
+                                    for item in message_content:
+                                        if isinstance(item, dict):
+                                            if item.get('type') == 'text':
+                                                content_parts.append(item.get('text', ''))
+                                            elif item.get('type') == 'tool_use':
+                                                tool_name = item.get('name', 'unknown_tool')
+                                                tool_input = item.get('input', {})
+                                                content_parts.append(f"[工具调用: {tool_name}]")
+                                            elif item.get('type') == 'thinking':
+                                                # 保留thinking内容，这是完整的思维链
+                                                thinking_content = item.get('thinking', '')
+                                                content_parts.append(f"[思维链]\n{thinking_content}")
+                                        else:
+                                            # item 不是字典，可能是字符串
+                                            content_parts.append(str(item))
+                                    content = '\n'.join(content_parts)
+                                else:
+                                    content = str(message_content)
+                            else:
+                                content = str(message)
+                        
+                        if content:
                             # 清理内容中的敏感信息
                             sanitized_content = input_validator.sanitize_string(content, max_length=10000)
                             recent_context.insert(0, sanitized_content)

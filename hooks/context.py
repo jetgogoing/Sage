@@ -25,6 +25,14 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Union
 from dataclasses import dataclass
 
+# 加载环境变量文件
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # 如果没有安装python-dotenv包，静默处理
+    pass
+
 
 @dataclass
 class DatabaseConfig:
@@ -153,8 +161,8 @@ class HookExecutionContext:
     def logs_dir(self) -> Path:
         """获取logs目录路径"""
         if self._logs_dir is None:
-            self._logs_dir = self.hooks_dir / "logs"
-            self._logs_dir.mkdir(exist_ok=True)
+            self._logs_dir = self.project_root / "logs" / "Hooks"
+            self._logs_dir.mkdir(parents=True, exist_ok=True)
         return self._logs_dir
     
     @property
@@ -402,7 +410,53 @@ class HookExecutionContext:
         except Exception:
             results["embedding_config_valid"] = False
         
+        # Phase 4.2 增强验证: 检查SiliconFlow API环境
+        results["siliconflow_api_key_exists"] = bool(os.getenv('SILICONFLOW_API_KEY'))
+        
+        # Phase 4.2 增强验证: 检查Memory Fusion模板文件
+        memory_fusion_template_path = self.project_root / "prompts" / "memory_fusion_prompt_programming.txt"
+        results["memory_fusion_template_exists"] = memory_fusion_template_path.exists()
+        
+        # Phase 4.2 增强验证: 检查网络连接到SiliconFlow API
+        results["siliconflow_api_accessible"] = self._check_network_connectivity()
+        
+        # Phase 4.2 增强验证: 检查SAGE_MAX_RESULTS环境变量有效性
+        sage_max_results = os.getenv('SAGE_MAX_RESULTS', '10')
+        try:
+            max_results_value = int(sage_max_results)
+            results["sage_max_results_valid"] = 1 <= max_results_value <= 100
+        except ValueError:
+            results["sage_max_results_valid"] = False
+        
         return results
+    
+    def _check_network_connectivity(self) -> bool:
+        """
+        检查到SiliconFlow API的网络连接性
+        
+        Returns:
+            网络连接是否可用
+        """
+        import socket
+        
+        try:
+            # 尝试连接到SiliconFlow API主机
+            # 使用socket进行快速连接测试，避免完整HTTP请求的开销
+            host = "api.siliconflow.cn"
+            port = 443  # HTTPS端口
+            
+            # 设置较短的超时时间
+            socket.setdefaulttimeout(3)
+            
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                result = sock.connect_ex((host, port))
+                return result == 0  # 0表示连接成功
+                
+        except Exception:
+            return False
+        finally:
+            # 重置默认超时
+            socket.setdefaulttimeout(None)
     
     def ensure_script_permissions(self, auto_fix: bool = True) -> Dict[str, Any]:
         """

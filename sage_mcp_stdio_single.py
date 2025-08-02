@@ -331,13 +331,19 @@ class SageMCPStdioServerV3:
         sys.stderr.flush()
         
         # 初始化 sage_core
+        # 确保必要的数据库配置已设置
+        db_password = os.getenv("DB_PASSWORD")
+        if not db_password:
+            logger.error("DB_PASSWORD environment variable is required")
+            raise ValueError("数据库密码未配置，请设置 DB_PASSWORD 环境变量")
+        
         config = {
             "database": {
                 "host": os.getenv("DB_HOST", "localhost"),
                 "port": int(os.getenv("DB_PORT", "5432")),
                 "database": os.getenv("DB_NAME", "sage_memory"),
                 "user": os.getenv("DB_USER", "sage"),
-                "password": os.getenv("DB_PASSWORD", "sage123")
+                "password": db_password
             },
             "embedding": {
                 "model": os.getenv("EMBEDDING_MODEL", "Qwen/Qwen3-Embedding-8B"),
@@ -346,6 +352,9 @@ class SageMCPStdioServerV3:
         }
         
         try:
+            # 确保获取 sage_core 实例再初始化
+            if self.sage_core is None:
+                self.sage_core = await get_sage_core({})
             await self.sage_core.initialize(config)
             logger.info("Sage core initialized successfully")
         except Exception as e:
@@ -382,7 +391,7 @@ class SageMCPStdioServerV3:
             
     async def cleanup(self):
         """清理资源"""
-        if self.sage_core._initialized:
+        if self.sage_core is not None and hasattr(self.sage_core, '_initialized') and self.sage_core._initialized:
             await self.sage_core.cleanup()
             logger.info("Sage core cleaned up")
 

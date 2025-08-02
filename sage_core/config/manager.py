@@ -10,6 +10,14 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import logging
 
+# 加载环境变量文件
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # 如果没有安装python-dotenv包，静默处理
+    pass
+
 logger = logging.getLogger(__name__)
 
 
@@ -72,6 +80,18 @@ class ConfigManager:
                 "default_limit": 10,
                 "max_limit": 100,
                 "similarity_threshold": 0.7
+            },
+            "ai_compression": {
+                "provider": "siliconflow",
+                "model": "Tongyi-Zhiwen/QwenLong-L1-32B",
+                "max_tokens": 128000,
+                "temperature": 0.3,
+                "timeout_seconds": 120,
+                "enable": True,
+                "fallback_on_error": True
+            },
+            "memory_fusion": {
+                "max_results": int(os.getenv("SAGE_MAX_RESULTS", "100"))
             },
             "server": {
                 "host": "0.0.0.0",
@@ -142,3 +162,11 @@ class ConfigManager:
     def get_memory_config(self) -> Dict[str, Any]:
         """获取记忆系统配置"""
         return self.get('memory', {})
+    
+    def get_ai_compression_config(self) -> Dict[str, Any]:
+        """获取AI压缩配置"""
+        return self.get('ai_compression', {})
+    
+    def get_memory_fusion_config(self) -> Dict[str, Any]:
+        """获取记忆融合配置"""
+        return self.get('memory_fusion', {})

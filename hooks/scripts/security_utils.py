@@ -210,13 +210,14 @@ class InputValidator:
         
         return session_id
     
-    def sanitize_string(self, text: str, max_length: int = 10000) -> str:
+    def sanitize_string(self, text: str, max_length: int = 200000, enable_chunking: bool = True) -> str:
         """
         清理字符串，移除潜在的危险内容
         
         Args:
             text: 要清理的字符串
-            max_length: 最大长度
+            max_length: 最大长度，提高至200K
+            enable_chunking: 是否启用分块处理
             
         Returns:
             清理后的字符串
@@ -224,8 +225,13 @@ class InputValidator:
         if not text:
             return ""
         
-        # 截断过长的字符串
-        if len(text) > max_length:
+        # 如果启用分块处理且文本很长，保持完整性
+        if enable_chunking and len(text) > max_length:
+            # 标记为需要分块处理，但不直接截断
+            # 将在存储层进行分块处理
+            pass
+        elif len(text) > max_length:
+            # 只有在禁用分块时才截断
             text = text[:max_length] + "...[truncated]"
         
         # 移除危险模式
