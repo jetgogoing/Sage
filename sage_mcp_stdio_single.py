@@ -35,6 +35,7 @@ from mcp.types import (
 # Import sage_core
 from sage_core import MemoryContent, SearchOptions
 from sage_core.singleton_manager import get_sage_core
+from sage_core.resilience import breaker_manager
 
 # Configure logging - use local log path
 log_dir = os.environ.get('SAGE_LOG_DIR', '/Users/jet/Sage/logs')
@@ -154,6 +155,24 @@ class SageMCPStdioServerV3:
                         "type": "object",
                         "properties": {}
                     }
+                ),
+                Tool(
+                    name="reset_circuit_breaker",
+                    description="手动重置断路器状态",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "all": {
+                                "type": "boolean",
+                                "description": "是否重置所有断路器",
+                                "default": True
+                            },
+                            "breaker_name": {
+                                "type": "string",
+                                "description": "指定断路器名称（all为False时生效）"
+                            }
+                        }
+                    }
                 )
             ]
             
@@ -220,6 +239,56 @@ class SageMCPStdioServerV3:
                     status = await self.sage_core.get_status()
                     output = json.dumps(status, indent=2, ensure_ascii=False)
                     return [TextContent(type="text", text=output)]
+                
+                elif name == "reset_circuit_breaker":
+                    # 获取参数
+                    reset_all = arguments.get("all", True)
+                    breaker_name = arguments.get("breaker_name")
+                    
+                    # 记录操作前状态
+                    stats_before = breaker_manager.get_all_stats()
+                    
+                    # 执行重置
+                    if reset_all:
+                        breaker_manager.reset_all()
+                        operation = "重置所有断路器"
+                    elif breaker_name:
+                        breaker = breaker_manager.get(breaker_name)
+                        if breaker:
+                            breaker.reset()
+                            operation = f"重置断路器: {breaker_name}"
+                        else:
+                            return [TextContent(
+                                type="text",
+                                text=f"错误: 断路器 '{breaker_name}' 不存在"
+                            )]
+                    else:
+                        return [TextContent(
+                            type="text",
+                            text="错误: 必须指定 all=True 或提供 breaker_name"
+                        )]
+                    
+                    # 记录操作后状态
+                    stats_after = breaker_manager.get_all_stats()
+                    
+                    # 记录到日志文件
+                    import datetime
+                    log_entry = f"[{datetime.datetime.now()}] {operation}\n"
+                    log_file = os.path.join(log_dir, 'circuit_breaker_reset.log')
+                    with open(log_file, 'a', encoding='utf-8') as f:
+                        f.write(log_entry)
+                    
+                    # 构建响应
+                    response = [f"✅ {operation}已完成\n"]
+                    response.append("断路器状态:")
+                    for stat in stats_after:
+                        state_emoji = {"closed": "🟢", "open": "🔴", "half_open": "🟡"}
+                        emoji = state_emoji.get(stat['state'], "⚪")
+                        response.append(f"  {emoji} {stat['name']}: {stat['state']}")
+                    
+                    response.append(f"\n操作已记录到: {log_file}")
+                    
+                    return [TextContent(type="text", text="\n".join(response))]
                 
                 else:
                     raise ValueError(f"未知的工具: {name}")

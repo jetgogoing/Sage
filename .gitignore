@@ -148,8 +148,8 @@ debug_*.py
 migrate.pyclaude-search-mcp/
 
 # 文档文件夹
-docs/
-tests/
+# docs/ - 移除忽略，允许上传文档
+# tests/ - 移除忽略，允许上传测试文件
 
 # MCP 配置符号链接
 .mcp。json
