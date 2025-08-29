@@ -205,7 +205,9 @@ class SageLogger:
         # 文件处理器
         if file_enabled:
             try:
-                log_dir = Path("/Users/jet/Sage/logs/Hooks")
+                # 使用配置或环境变量获取项目路径
+                sage_home = os.getenv('SAGE_HOME', Path(__file__).parent.parent.parent)
+                log_dir = Path(sage_home) / "logs" / "Hooks"
                 log_dir.mkdir(exist_ok=True)
                 
                 # 验证日志目录路径安全性
@@ -427,4 +429,4 @@ if __name__ == "__main__":
         logger.exception("捕获到异常")
     
     print("✓ 日志测试完成")
-    print("检查日志文件: /Users/jet/Sage/logs/Hooks/test_logger.log")
+    print(f"检查日志文件: {os.path.join(os.getenv('SAGE_HOME', '.'), 'logs', 'Hooks', 'test_logger.log')}")

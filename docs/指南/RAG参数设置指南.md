@@ -103,7 +103,7 @@ Sage智能记忆系统利用RAG（检索增强生成）流程，实现从记忆�
 ### 环境变量配置 (.env)
 ```bash
 # SiliconFlow API配置
-SILICONFLOW_API_KEY=sk-xtjxdvdwjfiiggwxkojmiryhcfjliywfzurbtsorwvgkimdg
+SILICONFLOW_API_KEY=your_api_key_here
 
 # RAG检索配置
 SAGE_MAX_RESULTS=100

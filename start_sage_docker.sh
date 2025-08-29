@@ -3,7 +3,8 @@
 # 支持手动启动和 Claude Code CLI 自动启动模式
 
 CONTAINER_NAME="sage-mcp"
-PROJECT_DIR="/Users/jet/Sage"
+# 使用环境变量或当前目录
+PROJECT_DIR="${SAGE_HOME:-$(pwd)}"
 
 # 智能检测模式：如果有 stdin 输入或运行环境非交互，则为 CLI 模式
 if [ ! -t 0 ] || [ ! -t 1 ]; then

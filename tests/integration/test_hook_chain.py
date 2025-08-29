@@ -5,8 +5,8 @@
 import sys
 import os
 import asyncio
-sys.path.insert(0, '/Users/jet/Sage/hooks/scripts')
-sys.path.insert(0, '/Users/jet/Sage')
+sys.path.insert(0, os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts"))
+sys.path.insert(0, os.getenv('SAGE_HOME', '.'))
 
 from sage_prompt_enhancer import SagePromptEnhancer
 

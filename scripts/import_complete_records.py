@@ -33,8 +33,10 @@ class CompleteRecordsImporter:
         self.vectorized_count = 0
         
         # 数据源路径
-        self.hook_records_dir = Path('/Users/jet/.sage_hooks_temp')
-        self.claude_transcripts_dir = Path('/Users/jet/.claude/projects/-Users-jet-sage')
+        # 使用用户主目录，跨平台兼容
+        home_dir = Path.home()
+        self.hook_records_dir = home_dir / '.sage_hooks_temp'
+        self.claude_transcripts_dir = home_dir / '.claude' / 'projects' / '-Users-jet-sage'
         
         logger.info("完整记录导入器初始化完成")
     

@@ -217,22 +217,22 @@ export USE_CUDA=true
 ### 2. 监控与日志
 
 **关键日志路径**：
-- 主日志：`/Users/jet/Sage/logs/sage_core.log`
-- Hook日志：`/Users/jet/Sage/logs/Hooks/prompt_enhancer.log`
-- 压缩失败：`/Users/jet/Sage/logs/Enhancer/compression_errors.log`
-- 检索失败：`/Users/jet/Sage/logs/Retriever/search_failures.log`
+- 主日志：`os.getenv('SAGE_HOME', '.')/logs/sage_core.log`
+- Hook日志：`os.getenv('SAGE_HOME', '.')/logs/Hooks/prompt_enhancer.log`
+- 压缩失败：`os.getenv('SAGE_HOME', '.')/logs/Enhancer/compression_errors.log`
+- 检索失败：`os.getenv('SAGE_HOME', '.')/logs/Retriever/search_failures.log`
 
 **监控命令**：
 ```bash
 # 实时监控RAG流程
-tail -f /Users/jet/Sage/logs/sage_core.log | grep "RAG流程"
+tail -f os.getenv('SAGE_HOME', '.')/logs/sage_core.log | grep "RAG流程"
 
 # 分析API调用性能
-grep "SiliconFlow API调用" /Users/jet/Sage/logs/*.log | \
+grep "SiliconFlow API调用" os.getenv('SAGE_HOME', '.')/logs/*.log | \
   awk -F'耗时: ' '{print $2}' | sort -n
 
 # 检查向量检索效率
-grep "步骤1-向量搜索完成" /Users/jet/Sage/logs/sage_core.log | \
+grep "步骤1-向量搜索完成" os.getenv('SAGE_HOME', '.')/logs/sage_core.log | \
   tail -20
 ```
 
@@ -245,8 +245,8 @@ grep "步骤1-向量搜索完成" /Users/jet/Sage/logs/sage_core.log | \
      backup_$(date +%Y%m%d).sql
    
    # 备份配置
-   cp /Users/jet/Sage/config.json \
-     /Users/jet/Sage/backups/config_$(date +%Y%m%d).json
+   cp os.getenv('SAGE_HOME', '.')/config.json \
+     os.getenv('SAGE_HOME', '.')/backups/config_$(date +%Y%m%d).json
    ```
 
 2. **性能优化**：

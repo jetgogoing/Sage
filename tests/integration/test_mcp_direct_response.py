@@ -2,6 +2,7 @@
 """
 直接测试MCP响应格式是否符合Hook的期望
 """
+import os
 import subprocess
 import json
 import sys
@@ -43,7 +44,7 @@ def test_mcp_response_format():
         print(f"输入数据: {input_data.strip()}")
         
         # 调用 Sage MCP Server
-        sage_mcp_path = "/Users/jet/Sage/sage_mcp_stdio_single.py"
+        sage_mcp_path = os.path.join(os.getenv('SAGE_HOME', '.'), "sage_mcp_stdio_single.py")
         cmd = [sys.executable, sage_mcp_path]
         
         result = subprocess.run(

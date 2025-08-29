@@ -108,6 +108,56 @@ class TextGenerator(AICompressor):
             # 降级到本地处理
             return self._fallback_generation(messages)
     
+    async def compress(self, memories: List[Dict[str, Any]], max_tokens: int = 500) -> str:
+        """压缩记忆列表为摘要
+        
+        Args:
+            memories: 记忆列表
+            max_tokens: 最大 token 数
+            
+        Returns:
+            压缩后的摘要文本
+        """
+        # 构建压缩提示
+        context_parts = []
+        for memory in memories:
+            context_parts.append(
+                f"用户：{memory['user_input']}\n"
+                f"助手：{memory['assistant_response']}"
+            )
+        
+        messages = [
+            {
+                "role": "system",
+                "content": "请将以下对话历史压缩成一个简短的摘要，保留关键信息："
+            },
+            {
+                "role": "user",
+                "content": "\n\n".join(context_parts)
+            }
+        ]
+        
+        return await self.generate(messages, max_tokens=max_tokens, temperature=0.3)
+    
+    async def compress_context(self, prompt_template: str, context_chunks: List[str], 
+                              user_query: str, **kwargs) -> str:
+        """实现 AICompressor 接口的压缩方法
+        
+        Args:
+            prompt_template: 压缩提示模板
+            context_chunks: 上下文片段
+            user_query: 用户查询
+            
+        Returns:
+            压缩后的文本
+        """
+        messages = [
+            {"role": "system", "content": prompt_template},
+            {"role": "user", "content": f"用户查询：{user_query}\n\n相关上下文：\n" + "\n".join(context_chunks)}
+        ]
+        
+        return await self.generate(messages, **kwargs)
+    
     def _fallback_generation(self, messages: List[Dict[str, str]]) -> str:
         """降级处理：改进的本地文本生成 - 生成丰富的上下文内容
         

@@ -207,7 +207,7 @@ WITH (lists = 100);
         {
             "tool_name": "Read",
             "tool_input": {
-                "file_path": "/Users/jet/Sage/hooks/scripts/sage_prompt_enhancer.py"
+                "file_path": "os.getenv('SAGE_HOME', '.')/hooks/scripts/sage_prompt_enhancer.py"
             },
             "tool_output": {
                 "content": "...",
@@ -463,7 +463,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=sage_memory
 DB_USER=sage
-DB_PASSWORD=sage123
+DB_PASSWORD=YOUR_SECURE_PASSWORD
 
 # 向量化配置
 EMBEDDING_MODEL=Qwen/Qwen3-Embedding-8B

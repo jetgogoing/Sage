@@ -21,7 +21,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 # 添加脚本路径到 Python 路径
-hooks_scripts_path = Path("/Users/jet/Sage/hooks/scripts")
+hooks_scripts_path = Path(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts"))
 sys.path.insert(0, str(hooks_scripts_path))
 
 from config_manager import ConfigManager
@@ -38,15 +38,15 @@ class TestSageHooksIntegration(unittest.TestCase):
         
         # 复制脚本到测试目录
         import shutil
-        shutil.copy("/Users/jet/Sage/hooks/scripts/sage_prompt_enhancer.py", 
+        shutil.copy(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_prompt_enhancer.py"), 
                    self.hooks_dir / "sage_prompt_enhancer.py")
-        shutil.copy("/Users/jet/Sage/hooks/scripts/sage_stop_hook.py", 
+        shutil.copy(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_stop_hook.py"), 
                    self.hooks_dir / "sage_stop_hook.py")
-        shutil.copy("/Users/jet/Sage/hooks/scripts/config_manager.py", 
+        shutil.copy(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "config_manager.py"), 
                    self.hooks_dir / "config_manager.py")
-        shutil.copy("/Users/jet/Sage/hooks/scripts/security_utils.py", 
+        shutil.copy(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "security_utils.py"), 
                    self.hooks_dir / "security_utils.py")
-        shutil.copy("/Users/jet/Sage/hooks/scripts/logger.py", 
+        shutil.copy(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "logger.py"), 
                    self.hooks_dir / "logger.py")
     
     def tearDown(self):

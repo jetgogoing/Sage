@@ -10,6 +10,7 @@ Hooks与Sage Core深度集成测试
 4. 数据持久化和召回准确性
 """
 
+import os
 import json
 import sys
 import subprocess
@@ -24,8 +25,8 @@ from unittest.mock import patch, MagicMock
 from typing import Dict, List, Any, Optional
 
 # 添加项目路径
-sys.path.insert(0, '/Users/jet/Sage')
-sys.path.insert(0, '/Users/jet/Sage/hooks/scripts')
+sys.path.insert(0, os.getenv('SAGE_HOME', '.'))
+sys.path.insert(0, os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts"))
 
 class HooksSageIntegrationTest(unittest.TestCase):
     """Hooks与Sage Core深度集成测试类"""
@@ -43,8 +44,8 @@ class HooksSageIntegrationTest(unittest.TestCase):
         }
         
         # 脚本路径
-        self.enhancer_script = "/Users/jet/Sage/hooks/scripts/sage_prompt_enhancer.py"
-        self.stop_hook_script = "/Users/jet/Sage/hooks/scripts/sage_stop_hook.py"
+        self.enhancer_script = os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_prompt_enhancer.py")
+        self.stop_hook_script = os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_stop_hook.py")
         
         # 创建测试transcript文件
         self.transcript_file = self.test_dir / "integration_test_transcript.jsonl"

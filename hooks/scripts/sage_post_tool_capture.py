@@ -43,7 +43,15 @@ class SagePostToolCapture:
         
     def setup_logging(self):
         """设置日志配置"""
-        log_dir = Path("/Users/jet/Sage/logs/Hooks")
+        # 确保SAGE_HOME被正确解析
+        sage_home = os.getenv('SAGE_HOME')
+        if not sage_home:
+            # 如果SAGE_HOME未设置，使用脚本所在目录的父目录
+            sage_home = Path(__file__).parent.parent.parent
+        else:
+            sage_home = Path(sage_home)
+        
+        log_dir = sage_home / "logs" / "Hooks"
         log_dir.mkdir(parents=True, exist_ok=True)
         
         log_file = log_dir / "post_tool_capture.log"
@@ -120,14 +128,36 @@ class SagePostToolCapture:
         
         return zen_data
     
+    def normalize_input_fields(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """标准化输入字段名称 - 将camelCase转换为snake_case"""
+        field_map = {
+            'sessionId': 'session_id',
+            'toolName': 'tool_name',
+            'toolInput': 'tool_input',
+            'toolOutput': 'tool_response',
+            'executionTimeMs': 'execution_time_ms',
+            'isError': 'is_error',
+            'errorMessage': 'error_message'
+        }
+        
+        normalized = {}
+        for key, value in input_data.items():
+            mapped_key = field_map.get(key, key)
+            normalized[mapped_key] = value
+        
+        return normalized
+    
     def capture_post_tool_state(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """捕获工具执行后的状态"""
-        session_id = input_data.get('session_id', 'unknown')
-        tool_name = input_data.get('tool_name', 'unknown')
+        # 标准化输入字段
+        normalized_data = self.normalize_input_fields(input_data)
+        
+        session_id = normalized_data.get('session_id', 'unknown')
+        tool_name = normalized_data.get('tool_name', 'unknown')
         
         # 查找对应的pre数据
         pre_result = self.find_pre_tool_data(session_id, tool_name)
-        if not pre_result:
+        if not pre_result or pre_result[0] is None:
             # 没有找到pre数据，创建独立的post记录
             self.logger.warning("Creating standalone post-tool record")
             call_id = f"post_only_{int(time.time()*1000)}"
@@ -137,16 +167,16 @@ class SagePostToolCapture:
             pre_data, pre_file = pre_result
             call_id = pre_data['call_id']
         
-        # 构建post数据 - 修复字段名从tool_output到tool_response
-        tool_response = input_data.get('tool_response', {})
+        # 构建post数据 - 使用标准化后的数据
+        tool_response = normalized_data.get('tool_response', {})
         post_call_data = {
             'timestamp': time.time(),
             'session_id': session_id,
             'tool_name': tool_name,
             'tool_output': tool_response,  # 保存完整的tool_response
-            'execution_time_ms': input_data.get('execution_time_ms'),
-            'is_error': input_data.get('is_error', False),
-            'error_message': input_data.get('error_message', '')
+            'execution_time_ms': normalized_data.get('execution_time_ms'),
+            'is_error': normalized_data.get('is_error', False),
+            'error_message': normalized_data.get('error_message', '')
         }
         
         # 特殊处理ZEN工具

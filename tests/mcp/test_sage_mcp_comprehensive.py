@@ -4,6 +4,7 @@ Sage MCP 会话存储功能综合测试报告
 对 PreToolUse、PostToolUse、Stop Hook 三个hook功能进行全面测试
 """
 
+import os
 import json
 import sys
 import subprocess
@@ -12,7 +13,7 @@ import asyncio
 from pathlib import Path
 
 # 添加项目路径
-sys.path.insert(0, '/Users/jet/Sage')
+sys.path.insert(0, os.getenv('SAGE_HOME', '.'))
 
 class SageMCPComprehensiveTest:
     """Sage MCP 综合测试类"""
@@ -27,7 +28,7 @@ class SageMCPComprehensiveTest:
         """测试Hook配置是否正确"""
         print("\n📋 测试Hook配置...")
         
-        hook_config_path = "/Users/jet/Sage/hooks/new_hooks.json"
+        hook_config_path = os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "new_hooks.json")
         try:
             with open(hook_config_path, 'r') as f:
                 config = json.load(f)
@@ -106,7 +107,7 @@ class SageMCPComprehensiveTest:
         
         try:
             result = subprocess.run([
-                "python3", "/Users/jet/Sage/hooks/scripts/sage_pre_tool_capture.py"
+                "python3", os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_pre_tool_capture.py")
             ], input=json.dumps(test_input), text=True, capture_output=True, timeout=10)
             
             if result.returncode != 0:
@@ -143,7 +144,7 @@ class SageMCPComprehensiveTest:
         
         try:
             result = subprocess.run([
-                "python3", "/Users/jet/Sage/hooks/scripts/sage_post_tool_capture.py"
+                "python3", os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_post_tool_capture.py")
             ], input=json.dumps(test_input), text=True, capture_output=True, timeout=10)
             
             if result.returncode != 0:
@@ -185,7 +186,7 @@ class SageMCPComprehensiveTest:
         
         try:
             result = subprocess.run([
-                "python3", "/Users/jet/Sage/hooks/scripts/sage_stop_hook.py"
+                "python3", os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_stop_hook.py")
             ], input=json.dumps(test_input), text=True, capture_output=True, timeout=30)
             
             print(f"Stop Hook 执行完成 - 返回码: {result.returncode}")

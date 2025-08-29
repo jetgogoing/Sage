@@ -31,7 +31,7 @@
 ## 修改范围与文件变动
 
 ### 文件修改详情
-**文件路径**：`/Users/jet/Sage/sage_core/core_service.py`  
+**文件路径**：`os.getenv('SAGE_HOME', '.')/sage_core/core_service.py`  
 **修改行号**：343-348 行  
 **修改原因**：添加 AI 压缩内容检测逻辑，确保 AI 生成的智能内容直接返回
 

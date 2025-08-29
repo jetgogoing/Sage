@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 # 添加项目路径
-sys.path.insert(0, '/Users/jet/Sage')
+sys.path.insert(0, os.getenv('SAGE_HOME', '.'))
 
 class SageMCPFullChainTest:
     """Sage MCP 全链路测试类"""
@@ -34,9 +34,9 @@ class SageMCPFullChainTest:
         self.temp_dir.mkdir(exist_ok=True)
         
         # Hook脚本路径
-        self.pre_tool_script = "/Users/jet/Sage/hooks/scripts/sage_pre_tool_capture.py"
-        self.post_tool_script = "/Users/jet/Sage/hooks/scripts/sage_post_tool_capture.py"
-        self.stop_hook_script = "/Users/jet/Sage/hooks/scripts/sage_stop_hook.py"
+        self.pre_tool_script = os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_pre_tool_capture.py")
+        self.post_tool_script = os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_post_tool_capture.py")
+        self.stop_hook_script = os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_stop_hook.py")
         
         print(f"🧪 初始化测试环境 - Session ID: {self.test_session_id}")
     

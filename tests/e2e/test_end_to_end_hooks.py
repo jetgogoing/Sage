@@ -4,6 +4,7 @@
 检查真实数据流转，无模拟数据
 """
 
+import os
 import json
 import time
 import subprocess
@@ -48,7 +49,7 @@ def check_data_aggregator():
     print("\n=== 检查数据聚合器 ===")
     
     # 检查日志文件
-    log_file = Path("/Users/jet/Sage/hooks/logs/data_aggregator.log")
+    log_file = Path(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "logs", "data_aggregator.log"))
     if not log_file.exists():
         print("❌ 数据聚合器日志不存在")
         return False
@@ -56,7 +57,7 @@ def check_data_aggregator():
     # 检查是否有数据被聚合
     try:
         # 导入聚合器
-        sys.path.append('/Users/jet/Sage/hooks/scripts')
+        sys.path.append(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts"))
         from hook_data_aggregator import get_aggregator
         
         aggregator = get_aggregator()
@@ -82,7 +83,7 @@ def check_stop_hook_archive():
     print("\n=== 检查 Stop Hook 归档 ===")
     
     # 检查增强版日志
-    enhanced_log = Path("/Users/jet/Sage/hooks/logs/archiver_enhanced.log")
+    enhanced_log = Path(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "logs", "archiver_enhanced.log"))
     if not enhanced_log.exists():
         print("❌ 增强版归档器日志不存在")
         return False
@@ -104,7 +105,7 @@ def check_stop_hook_archive():
         return False
     
     # 检查备份文件
-    backup_dir = Path("/Users/jet/Sage/hooks/logs/backup")
+    backup_dir = Path(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "logs", "backup"))
     backup_count = len(list(backup_dir.glob("conversation_*.json")))
     print(f"✅ 备份文件数: {backup_count}")
     
@@ -152,7 +153,7 @@ def check_hook_logs_health():
     """检查Hook日志健康状态"""
     print("\n=== 检查 Hook 日志健康状态 ===")
     
-    log_dir = Path("/Users/jet/Sage/hooks/logs")
+    log_dir = Path(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "logs"))
     issues = []
     
     # 检查日志文件大小
@@ -202,7 +203,7 @@ def check_technical_debt():
         debt_items.append(f"⚠️  有 {len(old_files)} 个超过24小时的临时文件未清理")
     
     # 2. 检查是否有TODO或FIXME
-    scripts_dir = Path("/Users/jet/Sage/hooks/scripts")
+    scripts_dir = Path(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts"))
     for py_file in scripts_dir.glob("*.py"):
         with open(py_file) as f:
             content = f.read()
@@ -214,7 +215,7 @@ def check_technical_debt():
     for py_file in scripts_dir.glob("*.py"):
         with open(py_file) as f:
             content = f.read()
-            if "/Users/jet/Sage" in content and "log_dir" not in content:
+            if os.getenv('SAGE_HOME', '.') in content and "log_dir" not in content:
                 hardcoded_paths.append(py_file.name)
     
     if hardcoded_paths:

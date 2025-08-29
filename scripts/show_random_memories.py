@@ -7,14 +7,15 @@ import asyncpg
 import json
 import random
 from datetime import datetime
+import os
 
 async def show_random_memories(count=3):
     conn = await asyncpg.connect(
-        host='localhost',
-        port=5432,
-        user='sage',
-        password='sage123',
-        database='sage_memory'
+        host=os.getenv('DB_HOST', 'localhost'),
+        port=int(os.getenv('DB_PORT', '5432')),
+        user=os.getenv('DB_USER', 'sage'),
+        password=os.getenv('DB_PASSWORD', 'sage123'),
+        database=os.getenv('DB_NAME', 'sage_memory')
     )
     
     try:

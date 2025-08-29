@@ -72,13 +72,15 @@ class MemoryManager:
                 # 使用当前会话ID（如果内容中没有指定）
                 session_id = content.session_id or self.current_session_id
                 
-                # 保存到存储 - 传递事务连接
+                # 保存到存储 - 传递事务连接和Agent字段
                 memory_id = await self.storage.save(
                     user_input=content.user_input,
                     assistant_response=content.assistant_response,
                     embedding=embedding,
                     metadata=content.metadata,
                     session_id=session_id,
+                    is_agent_report=content.is_agent_report,  # 添加
+                    agent_metadata=content.agent_metadata,    # 添加
                     _transaction_conn=conn
                 )
                 
@@ -104,13 +106,20 @@ class MemoryManager:
                     # 使用当前会话ID（如果内容中没有指定）
                     session_id = content.session_id or self.current_session_id
                     
-                    # 在同一事务中保存
+                    # 调试：打印MemoryContent内容
+                    logger.info(f"[DEBUG] MemoryManager._save_without_transaction - 事务模式")
+                    logger.info(f"  - content.is_agent_report: {content.is_agent_report}")
+                    logger.info(f"  - content.agent_metadata: {content.agent_metadata}")
+                    
+                    # 在同一事务中保存 - 传递Agent字段
                     memory_id = await self.storage.save(
                         user_input=content.user_input,
                         assistant_response=content.assistant_response,
                         embedding=embedding,
                         metadata=content.metadata,
                         session_id=session_id,
+                        is_agent_report=content.is_agent_report,
+                        agent_metadata=content.agent_metadata,
                         _transaction_conn=conn
                     )
                     
@@ -128,7 +137,9 @@ class MemoryManager:
                     assistant_response=content.assistant_response,
                     embedding=embedding,
                     metadata=content.metadata,
-                    session_id=session_id
+                    session_id=session_id,
+                    is_agent_report=content.is_agent_report,
+                    agent_metadata=content.agent_metadata
                 )
                 
                 logger.info(f"记忆已保存（无事务）：{memory_id}")

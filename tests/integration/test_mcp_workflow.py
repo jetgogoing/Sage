@@ -2,6 +2,7 @@
 """
 测试完整的MCP工作流程，包括initialized通知
 """
+import os
 import subprocess
 import json
 import sys
@@ -56,7 +57,7 @@ def test_mcp_full_workflow():
         print("步骤3: 工具调用")
         
         # 调用 Sage MCP Server
-        sage_mcp_path = "/Users/jet/Sage/sage_mcp_stdio_single.py"
+        sage_mcp_path = os.path.join(os.getenv('SAGE_HOME', '.'), "sage_mcp_stdio_single.py")
         cmd = [sys.executable, sage_mcp_path]
         
         result = subprocess.run(

@@ -2,6 +2,7 @@
 """
 实际场景测试：模拟Claude CLI提交的真实数据格式
 """
+import os
 import json
 import sys
 import subprocess
@@ -31,7 +32,7 @@ def test_tool_call_result():
     
     # 执行hook
     result = subprocess.run(
-        ["python", "/Users/jet/Sage/hooks/scripts/sage_stop_hook.py"],
+        ["python", os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_stop_hook.py")],
         input=jsonl_data,
         capture_output=True,
         text=True
@@ -80,7 +81,7 @@ def test_standard_conversation():
     jsonl_data = json.dumps(conversation_data)
     
     result = subprocess.run(
-        ["python", "/Users/jet/Sage/hooks/scripts/sage_stop_hook.py"],
+        ["python", os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_stop_hook.py")],
         input=jsonl_data,
         capture_output=True,
         text=True
@@ -119,7 +120,7 @@ def test_logging_classification():
     jsonl_data = json.dumps(conversation_data)
     
     result = subprocess.run(
-        ["python", "/Users/jet/Sage/hooks/scripts/sage_stop_hook.py"],
+        ["python", os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_stop_hook.py")],
         input=jsonl_data,
         capture_output=True,
         text=True

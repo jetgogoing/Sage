@@ -34,7 +34,7 @@ class PathValidator:
             allowed_base_paths: 允许的基础路径列表
         """
         self.allowed_base_paths = allowed_base_paths or [
-            "/Users/jet/Sage",
+            os.getenv('SAGE_HOME', '.'),
             "/tmp/sage_hooks",
             "/tmp",  # 允许临时目录用于测试
             "/var/tmp",  # 系统临时目录
@@ -314,7 +314,7 @@ if __name__ == "__main__":
     
     # 测试路径验证
     try:
-        valid_path = path_validator.validate_path("/Users/jet/Sage/test.txt")
+        valid_path = path_validator.validate_path(os.path.join(os.getenv('SAGE_HOME', '.'), "test.txt"))
         print(f"✓ 路径验证通过: {valid_path}")
     except SecurityError as e:
         print(f"✗ 路径验证失败: {e}")

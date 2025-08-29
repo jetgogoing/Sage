@@ -4,6 +4,7 @@
 模拟工具调用生命周期，验证数据捕获和关联
 """
 
+import os
 import json
 import sys
 import time
@@ -11,7 +12,7 @@ import subprocess
 from pathlib import Path
 
 # 添加hooks脚本路径
-sys.path.append('/Users/jet/Sage/hooks/scripts')
+sys.path.append(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts"))
 
 from sage_pre_tool_capture import SagePreToolCapture
 from sage_post_tool_capture import SagePostToolCapture

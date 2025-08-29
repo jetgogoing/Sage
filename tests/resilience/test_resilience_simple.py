@@ -3,13 +3,14 @@
 """
 弹性机制简化测试 - 快速验证重试和断路器功能
 """
+import os
 import asyncio
 import logging
 import time
 
 # 添加项目路径
 import sys
-sys.path.append('/Users/jet/Sage')
+sys.path.append(os.getenv('SAGE_HOME', '.'))
 
 from sage_core.resilience import (
     retry, circuit_breaker, CircuitBreakerOpenError,

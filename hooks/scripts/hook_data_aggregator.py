@@ -45,7 +45,15 @@ class HookDataAggregator:
         
     def setup_logging(self):
         """设置日志配置"""
-        log_dir = Path("/Users/jet/Sage/logs/Hooks")
+        # 确保SAGE_HOME被正确解析
+        sage_home = os.getenv('SAGE_HOME')
+        if not sage_home:
+            # 如果SAGE_HOME未设置，使用脚本所在目录的父目录
+            sage_home = Path(__file__).parent.parent.parent
+        else:
+            sage_home = Path(sage_home)
+        
+        log_dir = sage_home / "logs" / "Hooks"
         log_dir.mkdir(parents=True, exist_ok=True)
         
         log_file = log_dir / "data_aggregator.log"

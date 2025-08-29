@@ -4,6 +4,7 @@
 验证Stop Hook能够成功整合Pre/Post Tool数据
 """
 
+import os
 import json
 import sys
 import time
@@ -12,7 +13,7 @@ from pathlib import Path
 import uuid
 
 # 添加hooks脚本路径
-sys.path.append('/Users/jet/Sage/hooks/scripts')
+sys.path.append(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts"))
 
 from hook_data_aggregator import get_aggregator
 from sage_pre_tool_capture import SagePreToolCapture
@@ -45,7 +46,7 @@ def simulate_complete_workflow():
             "toolName": tool_info['name'],
             "toolInput": tool_info['input'],
             "user": "test_user",
-            "environment": {"cwd": "/Users/jet/Sage"}
+            "environment": {"cwd": os.getenv('SAGE_HOME', '.')}
         }
         
         pre_capturer = SagePreToolCapture()

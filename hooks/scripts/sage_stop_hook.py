@@ -339,7 +339,7 @@ class SageStopHook:
         }
     
     def _parse_claude_cli_message(self, entry: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        """解析Claude CLI消息格式 - 支持字符串和数组格式"""
+        """解析Claude CLI消息格式 - 支持字符串和数组格式，增强Agent报告识别"""
         entry_type = entry.get('type', '')
         
         # 特殊处理：检查是否是user-prompt-submit-hook消息
@@ -396,19 +396,154 @@ class SageStopHook:
             # 确保正确的角色映射
             role = 'user' if entry_type == 'user' else 'assistant'
             
+            # 合并内容
+            full_content = '\n'.join(content_parts) if content_parts else ''
+            
+            # 检测并解析Agent报告
+            agent_info = self._parse_agent_report(full_content)
+            
             result = {
                 'role': role,
-                'content': '\n'.join(content_parts) if content_parts else '',
+                'content': full_content,
                 'timestamp': entry.get('timestamp'),
                 'uuid': entry.get('uuid'),
-                'is_submit_hook': is_submit_hook  # 标记是否是submit hook消息
+                'is_submit_hook': is_submit_hook,  # 标记是否是submit hook消息
+                'is_agent_report': agent_info is not None,  # 标记是否包含agent报告
+                'agent_metadata': agent_info  # 附加agent元数据
             }
+            
+            # 如果检测到Agent报告，记录详细日志
+            if agent_info:
+                self.logger.info(f"Detected Agent Report: {agent_info.get('agent_name', 'unknown')} - {agent_info.get('report_type', 'general')}")
             
             # 调试日志
             if entry_type == 'user':
                 self.logger.debug(f"Parsed user message: {result['content'][:100]}... (submit_hook: {is_submit_hook})")
             
             return result
+        return None
+    
+    def _parse_agent_report(self, content: str) -> Optional[Dict[str, Any]]:
+        """识别并解析Agent报告，支持多种格式"""
+        import re
+        
+        if not content:
+            return None
+        
+        agent_info = {}
+        
+        # 模式1: 标准格式 "=== [Type] Report by @agent_name ===" 或中文格式
+        # 支持英文格式和中文格式
+        patterns = [
+            r'===\s*(?:(.+?)\s+)?Report\s+by\s+@([\w-]+)\s*===',  # 英文格式，支持连字符
+            r'===\s*(.+?报告)\s+by\s+@([\w-]+)\s*===',  # 中文格式，支持连字符
+        ]
+        
+        match1 = None
+        for pattern in patterns:
+            match1 = re.search(pattern, content, re.IGNORECASE)
+            if match1:
+                break
+        if match1:
+            agent_info['report_type'] = match1.group(1) or 'General'
+            agent_info['agent_name'] = match1.group(2)
+            agent_info['format'] = 'standard'
+        
+        # 模式2: 简化格式 "Agent Report: agent_name"
+        elif 'Agent Report:' in content or 'AGENT REPORT:' in content:
+            pattern2 = r'Agent Report:\s*(\w+)'
+            match2 = re.search(pattern2, content, re.IGNORECASE)
+            if match2:
+                agent_info['agent_name'] = match2.group(1)
+                agent_info['report_type'] = 'General'
+                agent_info['format'] = 'simple'
+        
+        # 模式3: @agent_name 开头的报告
+        elif content.strip().startswith('@'):
+            pattern3 = r'^@(\w+)\s+'
+            match3 = re.match(pattern3, content.strip())
+            if match3:
+                agent_info['agent_name'] = match3.group(1)
+                agent_info['report_type'] = 'Direct'
+                agent_info['format'] = 'mention'
+        
+        # 如果找到了agent信息，继续提取更多元数据
+        if agent_info:
+            # 提取任务ID
+            task_id_pattern = r'(?:Task|执行|任务)\s*ID:\s*([^\s\n]+)'
+            task_match = re.search(task_id_pattern, content, re.IGNORECASE)
+            if task_match:
+                agent_info['task_id'] = task_match.group(1)
+            
+            # 提取执行时间
+            time_pattern = r'(?:执行时间|Execution Time|Duration|耗时):\s*([0-9.]+)\s*(?:秒|s|ms|毫秒)'
+            time_match = re.search(time_pattern, content, re.IGNORECASE)
+            if time_match:
+                agent_info['execution_time'] = time_match.group(1)
+            
+            # 检查是否包含结构化元数据
+            metadata_pattern = r'<!--\s*AGENT_METADATA\s*(.*?)\s*-->'
+            metadata_match = re.search(metadata_pattern, content, re.DOTALL)
+            if metadata_match:
+                try:
+                    embedded_metadata = json.loads(metadata_match.group(1))
+                    agent_info['embedded_metadata'] = embedded_metadata
+                    # 合并嵌入的元数据
+                    if 'agent_id' in embedded_metadata:
+                        agent_info['agent_id'] = embedded_metadata['agent_id']
+                    if 'internal_metrics' in embedded_metadata:
+                        agent_info['metrics'] = embedded_metadata['internal_metrics']
+                except json.JSONDecodeError:
+                    self.logger.warning("Failed to parse embedded agent metadata")
+            
+            # 统计报告内容特征
+            agent_info['content_features'] = {
+                'has_execution_id': bool(re.search(r'执行ID|Execution ID|Task ID', content, re.IGNORECASE)),
+                'has_metrics': bool(re.search(r'指标|Metrics|统计|Statistics', content, re.IGNORECASE)),
+                'has_errors': bool(re.search(r'错误|Error|失败|Failed|❌', content)),
+                'has_warnings': bool(re.search(r'警告|Warning|注意|⚠️', content)),
+                'has_success': bool(re.search(r'成功|Success|完成|✅', content)),
+                'has_recommendations': bool(re.search(r'建议|Recommend|Suggestion|下一步', content, re.IGNORECASE))
+            }
+            
+            # 计算报告完整性得分
+            feature_count = sum(agent_info['content_features'].values())
+            agent_info['completeness_score'] = feature_count / len(agent_info['content_features'])
+            
+            self.logger.info(f"Parsed agent report: {agent_info}")
+            return agent_info
+        
+        # 通用Agent检测：更严格的匹配规则，避免误判
+        # 必须同时满足更特定的条件
+        agent_patterns = [
+            r'agent\s+report',  # "agent report"
+            r'@\w+\s+(?:report|summary|分析|报告)',  # "@name report/summary"
+            r'(?:代理|Agent)\s*[:：]\s*\w+',  # "Agent: name"
+            r'by\s+@\w+',  # "by @agent"
+        ]
+        
+        for pattern in agent_patterns:
+            if re.search(pattern, content, re.IGNORECASE):
+                # 尝试提取agent名称
+                agent_name_pattern = r'(?:agent|代理|@)\s*[:\s]*(\w+)'
+                name_match = re.search(agent_name_pattern, content, re.IGNORECASE)
+                
+                return {
+                    'agent_name': name_match.group(1) if name_match else 'unknown',
+                    'report_type': 'Inferred',
+                    'format': 'generic',
+                    'confidence': 'low',
+                    'content_features': {
+                        'has_execution_id': False,
+                        'has_metrics': False,
+                        'has_errors': False,
+                        'has_warnings': False,
+                        'has_success': False,
+                        'has_recommendations': False
+                    },
+                    'completeness_score': 0.0
+                }
+        
         return None
     
     def _extract_tool_calls_from_message(self, entry: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -480,20 +615,46 @@ class SageStopHook:
             line = line.strip()
             if line.startswith('Human:'):
                 if current_role and current_content:
-                    messages.append({
+                    full_content = '\n'.join(current_content).strip()
+                    
+                    # 检测并解析Agent报告
+                    agent_info = self._parse_agent_report(full_content)
+                    
+                    message_data = {
                         'role': current_role,
-                        'content': '\n'.join(current_content).strip(),
-                        'timestamp': time.time()
-                    })
+                        'content': full_content,
+                        'timestamp': time.time(),
+                        'is_agent_report': agent_info is not None,
+                        'agent_metadata': agent_info
+                    }
+                    
+                    # 如果检测到Agent报告，记录详细日志
+                    if agent_info:
+                        self.logger.info(f"Detected Agent Report in text format: {agent_info.get('agent_name', 'unknown')} - {agent_info.get('report_type', 'general')}")
+                    
+                    messages.append(message_data)
                 current_role = 'user'
                 current_content = [line[6:].strip()]  # Remove 'Human:' prefix
             elif line.startswith('Assistant:'):
                 if current_role and current_content:
-                    messages.append({
+                    full_content = '\n'.join(current_content).strip()
+                    
+                    # 检测并解析Agent报告
+                    agent_info = self._parse_agent_report(full_content)
+                    
+                    message_data = {
                         'role': current_role,
-                        'content': '\n'.join(current_content).strip(),
-                        'timestamp': time.time()
-                    })
+                        'content': full_content,
+                        'timestamp': time.time(),
+                        'is_agent_report': agent_info is not None,
+                        'agent_metadata': agent_info
+                    }
+                    
+                    # 如果检测到Agent报告，记录详细日志
+                    if agent_info:
+                        self.logger.info(f"Detected Agent Report in text format: {agent_info.get('agent_name', 'unknown')} - {agent_info.get('report_type', 'general')}")
+                    
+                    messages.append(message_data)
                 current_role = 'assistant'
                 current_content = [line[10:].strip()]  # Remove 'Assistant:' prefix
             else:
@@ -502,11 +663,24 @@ class SageStopHook:
         
         # 添加最后一条消息
         if current_role and current_content:
-            messages.append({
+            full_content = '\n'.join(current_content).strip()
+            
+            # 检测并解析Agent报告
+            agent_info = self._parse_agent_report(full_content)
+            
+            message_data = {
                 'role': current_role,
-                'content': '\n'.join(current_content).strip(),
-                'timestamp': time.time()
-            })
+                'content': full_content,
+                'timestamp': time.time(),
+                'is_agent_report': agent_info is not None,
+                'agent_metadata': agent_info
+            }
+            
+            # 如果检测到Agent报告，记录详细日志
+            if agent_info:
+                self.logger.info(f"Detected Agent Report in text format: {agent_info.get('agent_name', 'unknown')} - {agent_info.get('report_type', 'general')}")
+            
+            messages.append(message_data)
         
         return messages
     
@@ -686,6 +860,23 @@ class SageStopHook:
                     tool_content = item.get('content', '')
                     if tool_content:
                         content_parts.append(tool_content)
+                # 新增：SubagentStop 处理逻辑
+                elif item.get('agent_type'):
+                    agent_type = item.get('agent_type')
+                    self.logger.info(f"Detected SubagentStop with agent_type: {agent_type}")
+                    
+                    # 处理 coding-executor 特定逻辑
+                    if agent_type == 'coding-executor':
+                        subagent_enrichments = self._handle_coding_executor_stop(item)
+                        if subagent_enrichments:
+                            tool_enrichments.extend(subagent_enrichments)
+                    
+                    # 添加 agent_type 信息到 tool_enrichments 用于后续处理
+                    tool_enrichments.append({
+                        'type': 'subagent_stop',
+                        'agent_type': agent_type,
+                        'agent_data': item
+                    })
                 elif isinstance(item, str):
                     content_parts.append(item)
         
@@ -888,20 +1079,35 @@ class SageStopHook:
     
     def _prepare_serializable_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """确保数据可以JSON序列化 - 修复版本"""
-        serializable_data = {}
-        for key, value in data.items():
-            if isinstance(value, Path):
-                serializable_data[key] = str(value)  # 转换Path为字符串
-            elif isinstance(value, dict):
-                serializable_data[key] = self._prepare_serializable_data(value)
-            elif isinstance(value, list):
-                serializable_data[key] = [
-                    str(item) if isinstance(item, Path) else item 
-                    for item in value
-                ]
+        import json
+        from datetime import datetime
+        
+        def make_serializable(obj):
+            """递归将对象转换为可序列化格式"""
+            if isinstance(obj, Path):
+                return str(obj)
+            elif hasattr(obj, 'to_dict') and callable(getattr(obj, 'to_dict')):
+                # 优先使用对象自己的 to_dict 方法（如 ToolCall, Turn 等）
+                return make_serializable(obj.to_dict())
+            elif isinstance(obj, datetime):
+                return obj.isoformat()
+            elif hasattr(obj, '__dict__'):  # 处理其他自定义对象
+                return {k: make_serializable(v) for k, v in obj.__dict__.items()}
+            elif isinstance(obj, dict):
+                return {k: make_serializable(v) for k, v in obj.items()}
+            elif isinstance(obj, (list, tuple)):
+                return [make_serializable(item) for item in obj]
+            elif isinstance(obj, (str, int, float, bool, type(None))):
+                return obj
             else:
-                serializable_data[key] = value
-        return serializable_data
+                # 对于其他类型，尝试转换为字符串
+                try:
+                    json.dumps(obj)  # 测试是否可序列化
+                    return obj
+                except (TypeError, ValueError):
+                    return str(obj)
+        
+        return make_serializable(data)
     
     def cleanup_temp_files(self):
         """清理临时文件"""
@@ -925,6 +1131,237 @@ class SageStopHook:
                 
         except Exception as e:
             self.logger.warning(f"Temp file cleanup failed: {e}")
+    
+    def _handle_coding_executor_stop(self, agent_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """处理 coding-executor SubagentStop 事件"""
+        try:
+            self.logger.info("Processing coding-executor SubagentStop event")
+            enrichments = []
+            
+            # 触发 code-review 子代理
+            if self._trigger_code_review_subagent():
+                enrichments.append({
+                    'type': 'subagent_trigger',
+                    'target_agent': 'code-review',
+                    'triggered_by': 'coding-executor',
+                    'status': 'triggered',
+                    'timestamp': time.time()
+                })
+                self.logger.info("code-review subagent triggered successfully")
+            else:
+                enrichments.append({
+                    'type': 'subagent_trigger',
+                    'target_agent': 'code-review',
+                    'triggered_by': 'coding-executor',
+                    'status': 'failed',
+                    'timestamp': time.time()
+                })
+                self.logger.warning("Failed to trigger code-review subagent")
+            
+            # 延迟触发 report-generator（给 code-review 一些时间完成）
+            if self._trigger_report_generator_subagent(delay_seconds=30):
+                enrichments.append({
+                    'type': 'subagent_trigger',
+                    'target_agent': 'report-generator',
+                    'triggered_by': 'coding-executor',
+                    'status': 'scheduled',
+                    'timestamp': time.time(),
+                    'delay_seconds': 30
+                })
+                self.logger.info("report-generator subagent scheduled successfully")
+            else:
+                enrichments.append({
+                    'type': 'subagent_trigger',
+                    'target_agent': 'report-generator',
+                    'triggered_by': 'coding-executor',
+                    'status': 'failed',
+                    'timestamp': time.time()
+                })
+                self.logger.warning("Failed to schedule report-generator subagent")
+            
+            return enrichments
+            
+        except Exception as e:
+            self.logger.error(f"Error in _handle_coding_executor_stop: {e}")
+            return []
+    
+    def _trigger_code_review_subagent(self) -> bool:
+        """触发 code-review 子代理"""
+        try:
+            # 获取最新的 git diff
+            git_diff = self._get_latest_git_diff()
+            
+            # 构造 code-review 命令
+            review_prompt = f"""基于最新的 git diff 进行全面代码审查：
+
+{git_diff if git_diff.strip() else "注意：未获取到 git diff，请基于项目当前状态进行审查"}
+
+请重点检查：
+1. 代码质量和规范性
+2. 潜在错误和安全问题
+3. 性能优化机会
+4. 统计方法的严谨性（如适用）
+5. 测试覆盖和边界条件
+"""
+
+            claude_cmd = [
+                '/usr/local/bin/claude', 
+                '--allowedTools', '*',
+                '--max-turns', '6',
+                'code-review',
+                review_prompt
+            ]
+            
+            # 在后台启动 code-review
+            process = subprocess.Popen(
+                claude_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                start_new_session=True  # 创建新的进程组，避免继承信号
+            )
+            
+            self.logger.info(f"Started code-review subagent with PID: {process.pid}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to trigger code-review subagent: {e}")
+            return False
+    
+    def _trigger_report_generator_subagent(self, delay_seconds: int = 0) -> bool:
+        """触发 report-generator 子代理（可选延迟）"""
+        try:
+            report_prompt = f"""请基于最近的 coding-executor 执行和 code-review 审查结果，生成综合阶段报告。
+
+请生成包含以下内容的报告：
+1. 执行阶段概述
+2. 代码变更摘要  
+3. 质量评估结果
+4. 发现的问题和建议
+5. 下一步行动建议
+
+报告应保存到 docs/执行报告/ 目录，使用时间戳命名格式。
+"""
+
+            if delay_seconds > 0:
+                # 使用 sleep 命令延迟执行
+                claude_cmd = [
+                    'sh', '-c', 
+                    f'sleep {delay_seconds} && /usr/local/bin/claude --allowedTools "*" --max-turns 6 report-generator "{report_prompt}"'
+                ]
+            else:
+                claude_cmd = [
+                    '/usr/local/bin/claude',
+                    '--allowedTools', '*', 
+                    '--max-turns', '6',
+                    'report-generator',
+                    report_prompt
+                ]
+            
+            # 在后台启动 report-generator
+            process = subprocess.Popen(
+                claude_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE, 
+                text=True,
+                start_new_session=True
+            )
+            
+            action = "scheduled" if delay_seconds > 0 else "started"
+            self.logger.info(f"{action.capitalize()} report-generator subagent with PID: {process.pid}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to trigger report-generator subagent: {e}")
+            return False
+    
+    def _get_latest_git_diff(self) -> str:
+        """获取最新的 git diff"""
+        try:
+            # 尝试获取 staged changes
+            result = subprocess.run(
+                ['git', 'diff', '--cached', '--no-pager'],
+                capture_output=True, text=True, timeout=15
+            )
+            
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout
+            
+            # 如果没有 staged changes，获取 working directory changes  
+            result = subprocess.run(
+                ['git', 'diff', '--no-pager'],
+                capture_output=True, text=True, timeout=15
+            )
+            
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout
+                
+            # 如果都没有，尝试获取最近一次提交的 diff
+            result = subprocess.run(
+                ['git', 'diff', '--no-pager', 'HEAD~1'],
+                capture_output=True, text=True, timeout=15
+            )
+            
+            if result.returncode == 0:
+                return result.stdout
+                
+            return ""
+            
+        except subprocess.TimeoutExpired:
+            self.logger.warning("Git diff command timed out")
+            return ""
+        except Exception as e:
+            self.logger.warning(f"Failed to get git diff: {e}")
+            return ""
+    
+    def _process_subagent_triggers(self, conversation_data: Dict[str, Any]) -> None:
+        """处理 SubagentStop 触发逻辑"""
+        try:
+            self.logger.info("Processing SubagentStop triggers...")
+            
+            # 检查是否有 SubagentStop 相关的工具增强
+            messages = conversation_data.get('messages', [])
+            subagent_triggers_found = False
+            
+            for message in messages:
+                tool_enrichments = message.get('tool_enrichments', [])
+                for enrichment in tool_enrichments:
+                    if enrichment.get('type') == 'subagent_stop':
+                        agent_type = enrichment.get('agent_type')
+                        self.logger.info(f"Found SubagentStop trigger for agent_type: {agent_type}")
+                        
+                        if agent_type == 'coding-executor':
+                            self.logger.info("Processing coding-executor SubagentStop trigger")
+                            subagent_triggers_found = True
+                            # 触发逻辑已经在 _handle_coding_executor_stop 中处理了
+                            break
+            
+            # 如果没有找到明确的 SubagentStop 标记，检查 agent 报告
+            if not subagent_triggers_found:
+                for message in reversed(messages):
+                    agent_metadata = message.get('agent_metadata')
+                    if agent_metadata:
+                        agent_name = agent_metadata.get('agent_name', '').lower()
+                        if any(keyword in agent_name for keyword in ['coding-executor', 'coding_executor', 'executor']):
+                            self.logger.info(f"Detected coding-executor completion from agent metadata: {agent_name}")
+                            
+                            # 手动触发 SubagentStop 处理
+                            fake_agent_data = {
+                                'agent_type': 'coding-executor',
+                                'agent_name': agent_name,
+                                'detected_from': 'agent_metadata'
+                            }
+                            self._handle_coding_executor_stop(fake_agent_data)
+                            subagent_triggers_found = True
+                            break
+            
+            if not subagent_triggers_found:
+                self.logger.debug("No SubagentStop triggers found in conversation")
+            else:
+                self.logger.info("SubagentStop trigger processing completed")
+                
+        except Exception as e:
+            self.logger.error(f"Error processing SubagentStop triggers: {e}")
     
     def run(self) -> None:
         """主运行逻辑 - 修复版本"""
@@ -955,6 +1392,10 @@ class SageStopHook:
             
             # 保存本地备份（保障策略）
             backup_success = self.save_local_backup(conversation_data)
+            
+            # 处理 SubagentStop 触发逻辑（在数据保存成功后）
+            if db_success or backup_success:
+                self._process_subagent_triggers(conversation_data)
             
             # 清理临时文件
             self.cleanup_temp_files()

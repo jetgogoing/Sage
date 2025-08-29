@@ -4,6 +4,7 @@
 验证工具调用数据是否能完整保存到数据库
 """
 
+import os
 import json
 import sys
 import subprocess
@@ -13,7 +14,7 @@ import time
 import asyncio
 
 # 添加项目路径
-sys.path.insert(0, '/Users/jet/Sage')
+sys.path.insert(0, os.getenv('SAGE_HOME', '.'))
 
 async def test_stop_hook_with_tools():
     """测试包含工具调用的Stop Hook数据库保存功能"""
@@ -36,7 +37,7 @@ async def test_stop_hook_with_tools():
     print("📝 创建包含工具调用的模拟transcript文件...")
     test_session_id = "test-tools-session-" + str(int(time.time()))
     
-    test_transcript_path = f"/Users/jet/Sage/tests/integration/test_tools_transcript.jsonl"
+    test_transcript_path = fos.path.join(os.getenv('SAGE_HOME', '.'), "tests", "integration", "test_tools_transcript.jsonl")
     with open(test_transcript_path, 'w', encoding='utf-8') as f:
         # 用户消息
         user_entry = {
@@ -86,7 +87,7 @@ async def test_stop_hook_with_tools():
     # 4. 调用Stop Hook
     try:
         hook_process = subprocess.Popen([
-            "python3", "/Users/jet/Sage/hooks/scripts/sage_stop_hook.py"
+            "python3", os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_stop_hook.py")
         ], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         
         stdout, stderr = hook_process.communicate(input=json.dumps(hook_input), timeout=30)

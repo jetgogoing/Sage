@@ -148,7 +148,14 @@ debug_*.py
 migrate.pyclaude-search-mcp/
 
 # 文档文件夹
-# docs/ - 移除忽略，允许上传文档
+# docs/ - 精确控制忽略和保留的子目录
+docs/总结报告/
+docs/执行报告/
+docs/执行计划/
+docs/问题汇总/
+# 保留用户帮助文档：
+# docs/指南/ - 包含部署和使用指南
+# docs/项目架构说明/ - 包含架构设计和技术说明
 # tests/ - 移除忽略，允许上传测试文件
 
 # MCP 配置符号链接

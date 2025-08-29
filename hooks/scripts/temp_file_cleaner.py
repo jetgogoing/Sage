@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 临时文件自动清理工具
-解决 /Users/jet/.sage_hooks_temp 中文件积累问题
+解决 os.path.join(os.path.expanduser('~'), '.sage_hooks_temp') 中文件积累问题
 """
 import os
 import time

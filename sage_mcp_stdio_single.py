@@ -37,8 +37,12 @@ from sage_core import MemoryContent, SearchOptions
 from sage_core.singleton_manager import get_sage_core
 from sage_core.resilience import breaker_manager
 
-# Configure logging - use local log path
-log_dir = os.environ.get('SAGE_LOG_DIR', '/Users/jet/Sage/logs')
+# Configure logging - use dynamic log path (cross-platform compatible)
+def get_project_root():
+    """动态获取项目根目录"""
+    return Path(__file__).parent
+
+log_dir = os.environ.get('SAGE_LOG_DIR', str(get_project_root() / 'logs'))
 os.makedirs(log_dir, exist_ok=True)
 
 logging.basicConfig(
@@ -69,7 +73,7 @@ class SageMCPStdioServerV3:
             return [
                 Tool(
                     name="S",
-                    description="保存用户和助手的对话到记忆系统",
+                    description="保存用户和助手的对话到记忆系统（支持Agent报告）",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -85,6 +89,40 @@ class SageMCPStdioServerV3:
                                 "type": "object",
                                 "description": "可选的元数据",
                                 "properties": {}
+                            },
+                            "agent_metadata": {
+                                "type": "object",
+                                "description": "Agent特定元数据（仅用于Agent报告）",
+                                "properties": {
+                                    "agent_name": {
+                                        "type": "string",
+                                        "description": "Agent名称"
+                                    },
+                                    "task_id": {
+                                        "type": "string",
+                                        "description": "任务ID"
+                                    },
+                                    "execution_id": {
+                                        "type": "string",
+                                        "description": "执行ID"
+                                    },
+                                    "performance_metrics": {
+                                        "type": "object",
+                                        "description": "性能指标"
+                                    },
+                                    "error_count": {
+                                        "type": "integer",
+                                        "description": "错误数量"
+                                    },
+                                    "warning_count": {
+                                        "type": "integer",
+                                        "description": "警告数量"
+                                    },
+                                    "quality_score": {
+                                        "type": "number",
+                                        "description": "质量评分"
+                                    }
+                                }
                             }
                         },
                         "required": ["user_prompt", "assistant_response"]
@@ -187,16 +225,46 @@ class SageMCPStdioServerV3:
                     self.sage_core = await get_sage_core({})
                 
                 if name == "S":
+                    # 长期优化：使用增强的MemoryContent原生支持Agent元数据
+                    merged_metadata = arguments.get("metadata", {})
+                    is_agent_report = False
+                    agent_metadata = None
+                    
+                    # 检查是否有agent_metadata需要保存
+                    if "agent_metadata" in arguments:
+                        agent_meta = arguments["agent_metadata"]
+                        is_agent_report = True
+                        agent_metadata = agent_meta
+                        
+                        # 同时在通用metadata中保留关键信息（向后兼容）
+                        merged_metadata["is_agent_report"] = True
+                        merged_metadata["agent_name"] = agent_meta.get("agent_name")
+                        merged_metadata["agent_task_id"] = agent_meta.get("task_id")
+                        merged_metadata["agent_execution_id"] = agent_meta.get("execution_id")
+                        logger.info(f"检测到Agent报告: {agent_meta.get('agent_name')}")
+                    
+                    # 使用增强的MemoryContent
                     content = MemoryContent(
                         user_input=arguments["user_prompt"],
                         assistant_response=arguments["assistant_response"],
-                        metadata=arguments.get("metadata", {})
+                        metadata=merged_metadata,
+                        is_agent_report=is_agent_report,
+                        agent_metadata=agent_metadata
                     )
                     memory_id = await self.sage_core.save_memory(content)
-                    return [TextContent(
-                        type="text",
-                        text=f"对话已保存，记忆ID: {memory_id}"
-                    )]
+                    
+                    # 根据是否为Agent报告返回不同的确认消息
+                    if merged_metadata.get("is_agent_report"):
+                        agent_name = merged_metadata.get("agent_name", "unknown")
+                        return [TextContent(
+                            type="text",
+                            text=f"Agent报告已保存 (@{agent_name})，记忆ID: {memory_id}"
+                        )]
+                    else:
+                        return [TextContent(
+                            type="text",
+                            text=f"对话已保存，记忆ID: {memory_id}"
+                        )]
                 
                 elif name == "get_context":
                     # 从环境变量读取默认值

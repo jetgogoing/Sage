@@ -56,12 +56,12 @@
 ## 修改范围与文件变动
 
 ### 调查阶段文件读取（无修改）
-- [x] `/Users/jet/Sage/hooks/scripts/sage_prompt_enhancer.py` — 分析Hook调用逻辑
-- [x] `/Users/jet/Sage/logs/Hooks/prompt_enhancer.log` — 确认日志模式
-- [x] `/Users/jet/Sage/sage_core/core_service.py` (第141-335行) — 发现关键问题代码
-- [x] `/Users/jet/Sage/prompts/memory_fusion_prompt_programming.txt` — 验证模板完整性
-- [x] `/Users/jet/Sage/sage_core/singleton_manager.py` — 分析初始化逻辑
-- [x] `/Users/jet/Sage/hooks/context.py` — 验证上下文管理
+- [x] `os.getenv('SAGE_HOME', '.')/hooks/scripts/sage_prompt_enhancer.py` — 分析Hook调用逻辑
+- [x] `os.getenv('SAGE_HOME', '.')/logs/Hooks/prompt_enhancer.log` — 确认日志模式
+- [x] `os.getenv('SAGE_HOME', '.')/sage_core/core_service.py` (第141-335行) — 发现关键问题代码
+- [x] `os.getenv('SAGE_HOME', '.')/prompts/memory_fusion_prompt_programming.txt` — 验证模板完整性
+- [x] `os.getenv('SAGE_HOME', '.')/sage_core/singleton_manager.py` — 分析初始化逻辑
+- [x] `os.getenv('SAGE_HOME', '.')/hooks/context.py` — 验证上下文管理
 
 ## 关键代码位置
 

@@ -84,11 +84,15 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_USER: sage
-      POSTGRES_PASSWORD: sage123
+      POSTGRES_PASSWORD: your_secure_password_here
       POSTGRES_DB: sage_memory
+      TZ: Asia/Shanghai          # 设置容器时区
+      PGTZ: Asia/Shanghai       # 设置PostgreSQL时区
     volumes:
       - sage-db-data:/var/lib/postgresql/data
       - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - /etc/localtime:/etc/localtime:ro    # 挂载宿主机时区
+      - /etc/timezone:/etc/timezone:ro      # 挂载时区信息
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sage -d sage_memory"]
       interval: 10s
@@ -102,17 +106,62 @@ volumes:
 
 ### 3.2 环境变量配置
 
-核心环境变量说明：
+项目采用集中化配置管理，通过 `config/settings.py` 统一处理所有配置项。
+
+#### 核心环境变量说明：
 
 | 变量名 | 默认值 | 说明 |
 |--------|--------|------|
 | `POSTGRES_USER` | sage | 数据库用户名 |
-| `POSTGRES_PASSWORD` | sage123 | 数据库密码 |
+| `POSTGRES_PASSWORD` | YOUR_SECURE_PASSWORD | 数据库密码（必须修改） |
 | `POSTGRES_DB` | sage_memory | 数据库名称 |
 | `DB_HOST` | localhost | 数据库主机地址 |
 | `DB_PORT` | 5432 | 数据库端口 |
+| `TZ` | Asia/Shanghai | 容器时区设置（可选） |
+| `PGTZ` | Asia/Shanghai | PostgreSQL时区设置（可选） |
 
-### 3.3 数据卷配置
+#### 配置优先级：
+1. 环境变量
+2. `.env` 文件
+3. `config/settings.py` 中的默认值
+
+### 3.3 时区配置说明
+
+系统采用**双时区隔离设计**，确保时间处理的准确性：
+
+#### 时区配置方式
+1. **环境变量配置**（推荐）
+   ```yaml
+   environment:
+     TZ: Asia/Shanghai          # 设置容器系统时区
+     PGTZ: Asia/Shanghai       # 设置PostgreSQL会话时区
+   ```
+
+2. **挂载宿主机时区**（可选）
+   ```yaml
+   volumes:
+     - /etc/localtime:/etc/localtime:ro    # 跟随宿主机时间
+     - /etc/timezone:/etc/timezone:ro      # 跟随宿主机时区
+   ```
+
+#### 时区处理机制
+- **存储层**：PostgreSQL 始终以 UTC 格式存储时间戳，确保数据一致性
+- **应用层**：通过 `astimezone()` 自动转换为系统本地时区（如北京时间）
+- **显示层**：用户看到的时间自动转换为本地时区格式
+
+#### 验证时区配置
+```bash
+# 查看容器时区
+docker exec sage-db date
+
+# 查看数据库时区设置
+docker exec sage-db psql -U sage -d sage_memory -c "SHOW timezone;"
+
+# 查看当前数据库时间
+docker exec sage-db psql -U sage -d sage_memory -c "SELECT NOW();"
+```
+
+### 3.4 数据卷配置
 
 - **数据持久化**: `sage-db-data` 卷确保数据在容器重启后保持
 - **初始化脚本**: `./docker/init.sql` 自动执行数据库初始化
@@ -176,8 +225,8 @@ GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO sage;
 
 **开发环境**:
 ```bash
-# 使用默认密码
-export POSTGRES_PASSWORD=sage123
+# 使用强密码
+export POSTGRES_PASSWORD=your_secure_password_here
 ```
 
 **生产环境**:
@@ -261,7 +310,7 @@ services:
       DATABASES_HOST: sage-db
       DATABASES_PORT: 5432
       DATABASES_USER: sage
-      DATABASES_PASSWORD: sage123
+      DATABASES_PASSWORD: YOUR_SECURE_PASSWORD
       DATABASES_DBNAME: sage_memory
       POOL_MODE: transaction
       MAX_CLIENT_CONN: 100
@@ -315,7 +364,7 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter
     environment:
-      DATA_SOURCE_NAME: postgresql://sage:sage123@sage-db:5432/sage_memory?sslmode=disable
+      DATA_SOURCE_NAME: postgresql://sage:YOUR_SECURE_PASSWORD@sage-db:5432/sage_memory?sslmode=disable
     ports:
       - "9187:9187"
     depends_on:
@@ -493,6 +542,48 @@ services:
   }
 }
 ```
+
+### 9.5 时区迁移与历史数据处理
+
+#### 历史数据时区转换
+如果您的系统之前使用 UTC 时间，现在需要显示为北京时间，可以使用以下方法：
+
+1. **SQL 查询时转换**（推荐）
+   ```sql
+   -- 将 UTC 时间转换为北京时间显示
+   SELECT 
+       id,
+       created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Shanghai' AS beijing_time,
+       user_input,
+       assistant_response
+   FROM memories
+   ORDER BY created_at DESC;
+   ```
+
+2. **创建北京时间视图**
+   ```sql
+   CREATE OR REPLACE VIEW memories_beijing AS
+   SELECT 
+       *,
+       created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Shanghai' AS beijing_time
+   FROM memories;
+   ```
+
+3. **应用层处理**
+   ```python
+   # Python 中转换时区
+   from datetime import datetime
+   import pytz
+   
+   utc_time = row['created_at']
+   beijing_tz = pytz.timezone('Asia/Shanghai')
+   beijing_time = utc_time.astimezone(beijing_tz)
+   ```
+
+#### 注意事项
+- **不建议批量修改历史数据**的时间戳，保持 UTC 存储是国际最佳实践
+- 新数据会自动按照配置的时区处理
+- 查询和显示时进行时区转换，确保数据一致性
 
 ## 10. 附录
 

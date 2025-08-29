@@ -93,7 +93,7 @@ graph TD
   2. 从`self.config_manager`检查`ai_compression.enable`配置
   3. 如果未启用，直接调用现有的降级逻辑
   4. 初始化`TextGenerator`实例，传入配置参数
-  5. 读取`/Users/jet/Sage/prompts/memory_fusion_prompt_programming.txt`模板内容
+  5. 读取`os.getenv('SAGE_HOME', '.')/prompts/memory_fusion_prompt_programming.txt`模板内容
   6. 将检索到的上下文chunks和用户query格式化填入模板
   7. 构建符合chat/completions API格式的messages数组：
      - system message: 包含压缩指令和Memory Fusion模板

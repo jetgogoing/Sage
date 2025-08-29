@@ -4,7 +4,7 @@
 """
 import sys
 import os
-sys.path.insert(0, '/Users/jet/Sage/hooks/scripts')
+sys.path.insert(0, os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts"))
 
 from sage_prompt_enhancer import SagePromptEnhancer
 

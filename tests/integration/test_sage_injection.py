@@ -4,6 +4,7 @@ Sage 注入流程测试脚本
 测试完整的记忆注入功能：向量索引、召回、重排、上下文压缩
 """
 
+import os
 import json
 import subprocess
 import sys
@@ -54,7 +55,7 @@ def test_sage_injection():
         
         try:
             # 调用 sage_prompt_enhancer
-            cmd = ["python3", "/Users/jet/Sage/hooks/scripts/sage_prompt_enhancer.py"]
+            cmd = ["python3", os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_prompt_enhancer.py")]
             
             start_time = time.time()
             result = subprocess.run(
@@ -129,7 +130,7 @@ def test_sage_injection():
         print(f"平均响应时间: {avg_time:.2f}s")
     
     # 保存详细报告
-    report_path = "/Users/jet/Sage/logs/sage_injection_test_report.json"
+    report_path = os.path.join(os.getenv('SAGE_HOME', '.'), "logs", "sage_injection_test_report.json")
     Path(report_path).parent.mkdir(exist_ok=True)
     
     with open(report_path, 'w', encoding='utf-8') as f:

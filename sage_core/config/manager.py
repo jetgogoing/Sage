@@ -87,7 +87,7 @@ class ConfigManager:
                 "max_tokens": 128000,
                 "temperature": 0.3,
                 "timeout_seconds": 120,
-                "enable": True,
+                "enable": bool(os.getenv("SAGE_ENABLE_SUMMARY", "true").lower() == "true"),
                 "fallback_on_error": True
             },
             "memory_fusion": {

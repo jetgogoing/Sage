@@ -11,6 +11,7 @@
 5. 性能和稳定性测试
 """
 
+import os
 import json
 import sys
 import subprocess
@@ -22,7 +23,7 @@ from unittest.mock import patch, MagicMock
 import uuid
 
 # 添加脚本路径
-hooks_scripts_path = Path("/Users/jet/Sage/hooks/scripts")
+hooks_scripts_path = Path(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts"))
 sys.path.insert(0, str(hooks_scripts_path))
 
 from config_manager import ConfigManager
@@ -40,8 +41,8 @@ class EndToEndTest(unittest.TestCase):
         self.transcript_file = self.test_dir / "test_transcript.jsonl"
         
         # 脚本路径
-        self.enhancer_script = "/Users/jet/Sage/hooks/scripts/sage_prompt_enhancer.py"
-        self.archiver_script = "/Users/jet/Sage/hooks/scripts/sage_stop_hook.py"
+        self.enhancer_script = os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_prompt_enhancer.py")
+        self.archiver_script = os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_stop_hook.py")
     
     def tearDown(self):
         """测试后清理"""
@@ -136,7 +137,7 @@ def fibonacci_optimized(n):
         self.assertEqual(archiver_process.returncode, 0, "归档器应该成功执行")
         
         # 验证备份文件是否创建
-        backup_dir = Path("/Users/jet/Sage/hooks/logs/backup")
+        backup_dir = Path(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "logs", "backup"))
         if backup_dir.exists():
             backup_files = list(backup_dir.glob("conversation_*.json"))
             print(f"   创建的备份文件: {len(backup_files)} 个")

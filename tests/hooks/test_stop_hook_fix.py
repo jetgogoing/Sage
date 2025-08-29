@@ -3,6 +3,7 @@
 测试 Sage Stop Hook 修复后的功能
 """
 
+import os
 import json
 import subprocess
 import sys
@@ -50,7 +51,7 @@ def test_stop_hook_fix():
     try:
         # 调用修复后的 Stop Hook
         process = subprocess.run([
-            "python3", "/Users/jet/Sage/hooks/scripts/sage_stop_hook.py"
+            "python3", os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_stop_hook.py")
         ], input=json.dumps(hook_input), text=True, capture_output=True, timeout=30)
         
         print(f"返回码: {process.returncode}")

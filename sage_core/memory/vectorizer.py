@@ -142,6 +142,16 @@ class TextVectorizer:
         
         # 优先按段落分割
         paragraphs = text.split('\n\n')
+        
+        # 特殊情况：如果没有段落分隔符且文本超长，强制按长度分割
+        if len(paragraphs) == 1 and len(text) > chunk_size:
+            # 没有段落分隔符的长文本，强制按字符长度分割
+            for i in range(0, len(text), chunk_size):
+                chunk = text[i:i + chunk_size]
+                if chunk.strip():
+                    chunks.append(chunk.strip())
+            return chunks
+        
         current_chunk = ""
         
         for paragraph in paragraphs:
@@ -160,10 +170,19 @@ class TextVectorizer:
                         current_chunk = sentence
                     else:
                         current_chunk += sentence
+                
+                # 如果句子分割后仍然过长，强制按长度分割
+                if len(current_chunk) > chunk_size:
+                    for i in range(0, len(current_chunk), chunk_size):
+                        chunk = current_chunk[i:i + chunk_size]
+                        if chunk.strip():
+                            chunks.append(chunk.strip())
+                    current_chunk = ""
             else:
                 # 正常段落处理
                 if len(current_chunk) + len(paragraph) > chunk_size:
-                    chunks.append(current_chunk.strip())
+                    if current_chunk.strip():
+                        chunks.append(current_chunk.strip())
                     current_chunk = paragraph
                 else:
                     current_chunk += ("\n\n" if current_chunk else "") + paragraph

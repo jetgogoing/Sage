@@ -11,8 +11,8 @@ import time
 from pathlib import Path
 
 # 添加项目路径
-sys.path.insert(0, '/Users/jet/Sage')
-sys.path.insert(0, '/Users/jet/Sage/hooks/scripts')
+sys.path.insert(0, os.getenv('SAGE_HOME', '.'))
+sys.path.insert(0, os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts"))
 
 def test_sage_stop_hook():
     """测试sage_stop_hook完整功能"""

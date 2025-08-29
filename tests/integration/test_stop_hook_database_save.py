@@ -4,6 +4,7 @@
 验证修复后的Stop Hook能否正确调用sage_core进行数据库持久化
 """
 
+import os
 import json
 import sys
 import subprocess
@@ -13,7 +14,7 @@ import time
 import asyncio
 
 # 添加项目路径
-sys.path.insert(0, '/Users/jet/Sage')
+sys.path.insert(0, os.getenv('SAGE_HOME', '.'))
 
 async def test_stop_hook_database_save():
     """测试Stop Hook的数据库保存功能"""
@@ -41,7 +42,7 @@ async def test_stop_hook_database_save():
     }
     
     # 创建Claude CLI格式的JSONL文件在允许的目录
-    test_transcript_path = "/Users/jet/Sage/tests/integration/test_transcript.jsonl"
+    test_transcript_path = os.path.join(os.getenv('SAGE_HOME', '.'), "tests", "integration", "test_transcript.jsonl")
     with open(test_transcript_path, 'w', encoding='utf-8') as f:
         # 用户消息
         user_entry = {
@@ -77,7 +78,7 @@ async def test_stop_hook_database_save():
     # 4. 调用Stop Hook
     try:
         hook_process = subprocess.Popen([
-            "python3", "/Users/jet/Sage/hooks/scripts/sage_stop_hook.py"
+            "python3", os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_stop_hook.py")
         ], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         
         stdout, stderr = hook_process.communicate(input=json.dumps(hook_input), timeout=30)

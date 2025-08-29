@@ -25,7 +25,10 @@ class IMemoryProvider(ABC):
     @abstractmethod
     async def save(self, user_input: str, assistant_response: str, 
                    embedding: np.ndarray, metadata: Optional[Dict[str, Any]] = None,
-                   session_id: Optional[str] = None) -> str:
+                   session_id: Optional[str] = None,
+                   is_agent_report: bool = False,
+                   agent_metadata: Optional[Dict[str, Any]] = None,
+                   **kwargs) -> str:
         """保存记忆到数据库
         
         Args:

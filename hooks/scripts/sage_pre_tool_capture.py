@@ -46,7 +46,7 @@ class SagePreToolCapture:
         cleaner = get_cleaner(str(self.temp_dir), max_age_hours=24.0)
         # 使用更可靠的触发机制：基于概率而非环境变量
         import random
-        if random.random() < 0.1:  # 10%概率触发清理
+        if random.random() < 0.01:  # 1%概率触发清理，避免频繁阻塞
             try:
                 stats = cleaner.cleanup_once()
                 if stats['cleaned_files'] > 0:
@@ -56,7 +56,15 @@ class SagePreToolCapture:
         
     def setup_logging(self):
         """设置日志配置"""
-        log_dir = Path("/Users/jet/Sage/logs/Hooks")
+        # 确保SAGE_HOME被正确解析
+        sage_home = os.getenv('SAGE_HOME')
+        if not sage_home:
+            # 如果SAGE_HOME未设置，使用脚本所在目录的父目录
+            sage_home = Path(__file__).parent.parent.parent
+        else:
+            sage_home = Path(sage_home)
+        
+        log_dir = sage_home / "logs" / "Hooks"
         log_dir.mkdir(parents=True, exist_ok=True)
         
         log_file = log_dir / "pre_tool_capture.log"
@@ -82,8 +90,30 @@ class SagePreToolCapture:
         return f"{project_name}_{hash_suffix}"
     
     
+    def normalize_input_fields(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """标准化输入字段名称 - 将camelCase转换为snake_case"""
+        field_map = {
+            'sessionId': 'session_id',
+            'toolName': 'tool_name',
+            'toolInput': 'tool_input',
+            'toolOutput': 'tool_response',
+            'executionTimeMs': 'execution_time_ms',
+            'isError': 'is_error',
+            'errorMessage': 'error_message'
+        }
+        
+        normalized = {}
+        for key, value in input_data.items():
+            mapped_key = field_map.get(key, key)
+            normalized[mapped_key] = value
+        
+        return normalized
+        
     def capture_pre_tool_state(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """捕获工具调用前的状态"""
+        # 标准化输入字段
+        normalized_data = self.normalize_input_fields(input_data)
+        
         # 生成唯一调用ID
         call_id = str(uuid.uuid4())
         
@@ -91,16 +121,16 @@ class SagePreToolCapture:
         pre_call_data = {
             'call_id': call_id,
             'timestamp': time.time(),
-            'session_id': input_data.get('session_id', 'unknown'),
-            'tool_name': input_data.get('tool_name', 'unknown'),
-            'tool_input': input_data.get('tool_input', {}),
+            'session_id': normalized_data.get('session_id', 'unknown'),
+            'tool_name': normalized_data.get('tool_name', 'unknown'),
+            'tool_input': normalized_data.get('tool_input', {}),
             'cwd': os.getcwd(),
             'project_id': self.get_project_id(),
             'project_name': os.path.basename(os.getcwd()),
             'project_path': os.getcwd(),
             'context': {
-                'user': input_data.get('user', 'unknown'),
-                'environment': input_data.get('environment', {})
+                'user': normalized_data.get('user', 'unknown'),
+                'environment': normalized_data.get('environment', {})
             }
         }
         
@@ -140,15 +170,18 @@ class SagePreToolCapture:
     
     def process_hook(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """处理PreToolUse Hook输入"""
-        self.logger.info(f"Processing PreToolUse Hook for tool: {input_data.get('tool_name', 'unknown')}")
+        # 标准化输入字段
+        normalized_data = self.normalize_input_fields(input_data)
+        
+        self.logger.info(f"Processing PreToolUse Hook for tool: {normalized_data.get('tool_name', 'unknown')}")
         
         # 验证必要字段
-        if not input_data.get('tool_name'):
+        if not normalized_data.get('tool_name'):
             self.logger.warning("No toolName provided in hook input")
             return {"status": "skipped", "message": "No toolName provided"}
         
         # 捕获状态
-        result = self.capture_pre_tool_state(input_data)
+        result = self.capture_pre_tool_state(normalized_data)
         
         # 记录性能指标
         if result.get('status') == 'captured':

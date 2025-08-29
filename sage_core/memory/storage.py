@@ -45,7 +45,10 @@ class MemoryStorage(IMemoryProvider, TransactionalStorage):
     @circuit_breaker("memory_storage_save", failure_threshold=5, recovery_timeout=60)
     async def save(self, user_input: str, assistant_response: str, 
                    embedding: np.ndarray, metadata: Optional[Dict[str, Any]] = None,
-                   session_id: Optional[str] = None, **kwargs) -> str:
+                   session_id: Optional[str] = None, 
+                   is_agent_report: bool = False,
+                   agent_metadata: Optional[Dict[str, Any]] = None,
+                   **kwargs) -> str:
         """保存记忆到数据库 - 带重试和断路器保护"""
         try:
             # 数据完整性验证 - 改进逻辑以支持单边消息
@@ -140,11 +143,39 @@ class MemoryStorage(IMemoryProvider, TransactionalStorage):
             # 将向量列表转换为 PostgreSQL vector 格式的字符串
             embedding_str = '[' + ','.join(map(str, embedding_list)) + ']'
             
-            # 插入记录 - 支持事务
+            # 长期优化：处理Agent元数据
+            # 现在是作为显式参数传入
+            agent_metadata_json = None
+            
+            # 调试：打印所有接收到的参数
+            logger.info(f"[DEBUG] save方法接收到的参数:")
+            logger.info(f"  - is_agent_report参数: {is_agent_report}")
+            logger.info(f"  - agent_metadata参数: {agent_metadata}")
+            logger.info(f"  - metadata内容: {metadata}")
+            logger.info(f"  - kwargs内容: {kwargs}")
+            
+            # 如果有agent_metadata参数，使用它
+            if agent_metadata:
+                is_agent_report = True
+                agent_metadata_json = json.dumps(agent_metadata)
+                logger.info(f"使用agent_metadata参数: {agent_metadata}")
+            # 否则从metadata中提取（向后兼容）
+            elif metadata and 'agent_metadata' in metadata:
+                is_agent_report = True
+                agent_metadata_json = json.dumps(metadata['agent_metadata'])
+                logger.info(f"从metadata提取agent_metadata: {metadata['agent_metadata']}")
+            
+            # 确保is_agent_report一致性
+            if not is_agent_report and metadata:
+                is_agent_report = metadata.get('is_agent_report', False)
+            
+            logger.info(f"最终: is_agent_report={is_agent_report}, agent_metadata_json={agent_metadata_json[:50] if agent_metadata_json else None}")
+            
+            # 插入记录 - 支持事务和Agent元数据
             query = '''
                 INSERT INTO memories 
-                (id, session_id, user_input, assistant_response, embedding, metadata)
-                VALUES ($1, $2, $3, $4, $5::vector, $6)
+                (id, session_id, user_input, assistant_response, embedding, metadata, is_agent_report, agent_metadata)
+                VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8::jsonb)
                 RETURNING id
             '''
             
@@ -158,7 +189,9 @@ class MemoryStorage(IMemoryProvider, TransactionalStorage):
                     user_input,
                     assistant_response,
                     embedding_str,
-                    json.dumps(metadata, ensure_ascii=False)
+                    json.dumps(metadata, ensure_ascii=False),
+                    is_agent_report,
+                    agent_metadata_json
                 )
             else:
                 # 否则使用普通连接
@@ -169,7 +202,9 @@ class MemoryStorage(IMemoryProvider, TransactionalStorage):
                     user_input,
                     assistant_response,
                     embedding_str,
-                    json.dumps(metadata, ensure_ascii=False)
+                    json.dumps(metadata, ensure_ascii=False),
+                    is_agent_report,
+                    agent_metadata_json
                 )
             
             logger.info(f"记忆已保存：{result}")

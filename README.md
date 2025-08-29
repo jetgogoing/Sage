@@ -7,6 +7,43 @@
 
 Sage是一个智能记忆管理系统，通过MCP（Model Context Protocol）协议与Claude桌面应用集成，为AI对话提供长期记忆和上下文增强能力。系统采用先进的向量检索和AI压缩技术，实现跨会话、跨时间的智能记忆召回。
 
+## 🚀 超快速部署（给Claude Code CLI用户）
+
+如果你正在使用Claude Code CLI，让Claude帮你部署最简单：
+
+```bash
+# 告诉Claude：
+"帮我部署Sage MCP Server，我的系统是 [macOS/Windows]"
+
+# Claude会自动：
+# 1. 检查Docker是否安装
+# 2. 复制并配置.env文件
+# 3. 启动服务
+# 4. 配置Claude桌面应用
+```
+
+### 手动部署只需3步
+
+**macOS/Linux:**
+```bash
+# 1. 复制配置
+cp .env.example .env
+# 2. 编辑.env（改密码和API密钥）
+# 3. 启动
+python start_sage.py
+```
+
+**Windows (需要WSL2):**
+```cmd
+# 1. 复制配置
+copy .env.example .env
+# 2. 编辑.env（改密码和API密钥）
+# 3. 启动
+python start_sage.py
+```
+
+验证成功：在Claude中输入 `@sage get_status`
+
 ## 🚀 核心功能
 
 ### 1. 智能提示词增强系统
@@ -56,12 +93,18 @@ sage_core.generate_prompt()
 
 ## 🛠️ 快速开始
 
-### 环境要求
-- **Python**: 3.9+
-- **Docker Desktop**: 用于数据库容器
-- **Claude 桌面应用**: MCP客户端
+### 前置要求
 
-### 安装部署
+**通用要求**：
+- Python 3.9+
+- Docker Desktop
+- Claude 桌面应用
+
+**Windows额外要求**：
+- WSL2（Windows 10 2004+ 或 Windows 11）
+- 在Docker Desktop启用WSL2集成
+
+### 详细部署步骤
 
 1. **克隆项目**
 ```bash
@@ -82,33 +125,69 @@ pip install -r requirements.txt
 ```
 
 4. **配置环境变量**
+
+项目使用集中化的配置管理系统，支持跨平台部署：
+
 ```bash
-# 创建 .env 文件
-cat > .env << EOF
-# 数据库配置
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=sage_memory
-DB_USER=sage
-DB_PASSWORD=sage123
+# 从模板创建配置文件
+cp .env.example .env
 
-# API 密钥
-SILICONFLOW_API_KEY=your-api-key-here
+# 编辑配置文件，设置必需的密码和API密钥
+# 注意：必须设置强密码，不能使用默认值
+nano .env  # 或使用其他编辑器
+```
 
-# Sage 配置
-SAGE_MAX_RESULTS=100
-SAGE_SIMILARITY_THRESHOLD=0.7
-EOF
+**配置系统特性：**
+- 🌍 **跨平台支持**：自动检测项目路径，支持Windows/macOS/Linux
+- 🔧 **智能默认值**：所有配置都有合理的默认值
+- 🔄 **环境变量覆盖**：可通过环境变量覆盖任何配置项
+- 📁 **集中管理**：通过 `config/settings.py` 统一管理所有配置
+
+**必须配置的项：**
+```bash
+# 项目根目录（可选，自动检测）
+SAGE_HOME=/path/to/your/sage  # Windows: C:\Projects\Sage
+
+# 数据库密码（必须修改默认值）
+DB_PASSWORD=your_secure_password_here
+
+# API密钥（从 https://siliconflow.cn 获取）
+SILICONFLOW_API_KEY=your_api_key_here
 ```
 
 5. **启动服务**
+
+方式1：使用跨平台Python启动器（推荐）
+```bash
+python start_sage.py
+```
+
+方式2：使用传统Shell脚本（仅Linux/macOS）
 ```bash
 bash start_sage_mcp.sh
+```
+
+方式3：Windows批处理脚本
+```cmd
+start_sage_mcp.bat
 ```
 
 6. **配置Claude应用**
 
 编辑Claude配置文件（`~/Library/Application Support/Claude/claude_desktop_config.json`）：
+```json
+{
+  "mcpServers": {
+    "sage": {
+      "command": "python",
+      "args": ["/path/to/your/Sage/start_sage.py"],
+      "startupTimeout": 30000
+    }
+  }
+}
+```
+
+注：也可以使用Shell脚本方式（需要根据操作系统选择）：
 ```json
 {
   "mcpServers": {
@@ -175,15 +254,39 @@ Sage/
 
 ## 🔧 高级配置
 
-### 性能调优
+### 环境变量说明
+
+#### 基础配置
 ```bash
-# 增加召回范围
+# 记忆检索配置
+SAGE_MAX_RESULTS=100              # 返回的记忆条数（默认100）
+SAGE_SIMILARITY_THRESHOLD=0.3     # 相似度阈值，0-1之间（默认0.3）
+SAGE_ENABLE_SUMMARY=true          # 启用AI智能压缩（默认true）
+
+# Reranker 配置（优化 token 消耗）
+SAGE_RERANKER_CANDIDATES=100      # 送入重排的候选数量（默认100，建议50-200）
+SAGE_RERANKER_TOP_K=10           # 最终返回的数量（默认10，建议5-20）
+SAGE_MAX_OUTPUT_TOKENS=2000      # 最大输出token限制（默认2000，建议不超过3000）
+
+# 日志配置
+SAGE_LOG_LEVEL=INFO              # 日志级别：DEBUG, INFO, WARNING, ERROR
+SAGE_DEBUG=false                 # 调试模式开关
+```
+
+#### 性能调优示例
+```bash
+# 增加召回范围（适合大型项目）
 export SAGE_MAX_RESULTS=200
+export SAGE_RERANKER_CANDIDATES=150
 
-# 降低相似度阈值
-export SAGE_SIMILARITY_THRESHOLD=0.6
+# 降低相似度阈值（提高召回率）
+export SAGE_SIMILARITY_THRESHOLD=0.2
 
-# 启用详细日志
+# 减少 token 消耗（适合 Claude CLI 额度有限的用户）
+export SAGE_RERANKER_TOP_K=5
+export SAGE_MAX_OUTPUT_TOKENS=1500
+
+# 启用详细日志（调试用）
 export SAGE_LOG_LEVEL=DEBUG
 ```
 

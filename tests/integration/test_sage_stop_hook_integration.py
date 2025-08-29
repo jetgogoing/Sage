@@ -36,7 +36,7 @@ def test_assistant_only_message():
         test_json = f.read()
     
     result = subprocess.run([
-        "python", "/Users/jet/Sage/hooks/scripts/sage_stop_hook.py"
+        "python", os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_stop_hook.py")
     ], input=test_json, capture_output=True, text=True)
     
     print(f"Exit code: {result.returncode}")
@@ -67,7 +67,7 @@ def test_user_only_message():
         json.dump(test_data, f)
     
     result = subprocess.run([
-        "python", "/Users/jet/Sage/hooks/scripts/sage_stop_hook.py", test_file
+        "python", os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_stop_hook.py"), test_file
     ], capture_output=True, text=True)
     
     print(f"Exit code: {result.returncode}")
@@ -98,7 +98,7 @@ def test_standard_conversation():
         json.dump(test_data, f)
     
     result = subprocess.run([
-        "python", "/Users/jet/Sage/hooks/scripts/sage_stop_hook.py", test_file
+        "python", os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_stop_hook.py"), test_file
     ], capture_output=True, text=True)
     
     print(f"Exit code: {result.returncode}")
@@ -126,7 +126,7 @@ def test_empty_messages():
         json.dump(test_data, f)
     
     result = subprocess.run([
-        "python", "/Users/jet/Sage/hooks/scripts/sage_stop_hook.py", test_file
+        "python", os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts", "sage_stop_hook.py"), test_file
     ], capture_output=True, text=True)
     
     print(f"Exit code: {result.returncode}")

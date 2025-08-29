@@ -282,55 +282,143 @@ class SageCore(ISageService):
                 return f"当前查询: {query}"
     
     async def _fallback_context_extraction(self, template: str, query: str) -> str:
-        """降级处理：改进的本地上下文提取逻辑"""
+        """智能降级处理：使用 Reranker 优化上下文选择"""
         import time
         start_time = time.time()
         
         try:
-            logger.info(f"[AI压缩] 使用改进的本地上下文提取逻辑")
+            logger.info(f"[AI压缩] 使用智能降级处理（Reranker 模式）")
             
+            # 分割模板为记忆片段
             lines = template.split('\n')
-            relevant_lines = []
             
-            # 改进的关键词匹配
-            keywords = ['项目', '功能', '问题', '代码', '实现', '技术', '开发', '架构', '设计', '优化']
-            
+            # 基础过滤：去除太短的无意义内容
+            meaningful_chunks = []
             for line in lines:
                 line_stripped = line.strip()
-                if line_stripped and len(line_stripped) > 5:
-                    # 检查关键词匹配或行长度合适
-                    if any(keyword in line.lower() for keyword in keywords) or len(line_stripped) > 20:
-                        relevant_lines.append(line_stripped)
+                if line_stripped and len(line_stripped) > 10:
+                    # 解析记忆格式（如 "[记忆 1] ..."）
+                    if line_stripped.startswith('[记忆'):
+                        # 跳过记忆标记行
+                        continue
+                    meaningful_chunks.append(line_stripped)
             
-            # 优先选择包含用户查询关键词的行
-            query_keywords = query.lower().split()[:5]  # 取前5个词
-            priority_lines = []
-            other_lines = []
+            if not meaningful_chunks:
+                logger.info(f"[AI压缩] 无有效记忆内容")
+                return f"暂无相关历史记忆。当前查询：{query}"
             
-            for line in relevant_lines:
-                if any(keyword in line.lower() for keyword in query_keywords if len(keyword) > 2):
-                    priority_lines.append(line)
-                else:
-                    other_lines.append(line)
+            logger.info(f"[AI压缩] 初步筛选：{len(meaningful_chunks)} 个有效片段")
             
-            # 组合结果：优先级行 + 其他行，总计不超过10行
-            final_lines = (priority_lines + other_lines)[:10]
-            
-            if final_lines:
-                compressed = '\n'.join(final_lines)
-                result = f"基于历史记忆的技术背景：\n{compressed}\n\n针对您的查询：{query}"
+            # 尝试使用 Reranker 进行语义重排
+            try:
+                from .memory.reranker import TextReranker
+                
+                reranker = TextReranker()
+                # 从环境变量读取候选数量配置
+                import os
+                reranker_candidates = int(os.getenv('SAGE_RERANKER_CANDIDATES', '100'))
+                chunks_to_rerank = meaningful_chunks[:reranker_candidates]
+                
+                # 执行重排，获取最相关的 top_k 个
+                reranker_top_k = int(os.getenv('SAGE_RERANKER_TOP_K', '10'))
+                logger.info(f"[AI压缩] 开始 Reranker 重排：{len(chunks_to_rerank)} 个候选，返回 top {reranker_top_k}")
+                ranked_chunks = await reranker.rerank(
+                    query=query,
+                    documents=chunks_to_rerank,
+                    top_k=reranker_top_k,
+                    return_scores=False
+                )
+                
+                # 估算 token 数量（简单估计：1个中文字符≈1.5 tokens）
+                max_output_tokens = int(os.getenv('SAGE_MAX_OUTPUT_TOKENS', '2000'))
+                total_chars = sum(len(chunk) for chunk in ranked_chunks)
+                estimated_tokens = int(total_chars * 1.5)
+                
+                # 如果超出 token 限制，进一步裁剪
+                if estimated_tokens > max_output_tokens:
+                    logger.warning(f"[AI压缩] 预估 {estimated_tokens} tokens 超出限制 {max_output_tokens}，进行裁剪")
+                    # 逐个累加直到接近限制
+                    trimmed_chunks = []
+                    current_tokens = 0
+                    for chunk in ranked_chunks:
+                        chunk_tokens = int(len(chunk) * 1.5)
+                        if current_tokens + chunk_tokens <= max_output_tokens:
+                            trimmed_chunks.append(chunk)
+                            current_tokens += chunk_tokens
+                        else:
+                            # 部分截取最后一个 chunk
+                            remaining_tokens = max_output_tokens - current_tokens
+                            remaining_chars = int(remaining_tokens / 1.5)
+                            if remaining_chars > 50:  # 至少保留 50 字符才有意义
+                                trimmed_chunks.append(chunk[:remaining_chars] + "...")
+                            break
+                    ranked_chunks = trimmed_chunks
+                    estimated_tokens = current_tokens
+                
+                logger.info(f"[AI压缩] Reranker 完成：选出 {len(ranked_chunks)} 个最相关片段，"
+                          f"约 {estimated_tokens} tokens（限制 {max_output_tokens}）")
+                
+                # 格式化输出
+                formatted_memories = []
+                for i, chunk in enumerate(ranked_chunks, 1):
+                    formatted_memories.append(f"[相关记忆 {i}] {chunk}")
+                
+                result = f"""基于语义相关性筛选的历史记忆（共 {len(ranked_chunks)} 条）：
+
+{chr(10).join(formatted_memories)}
+
+当前查询：{query}
+
+以上记忆已通过 AI 模型进行语义相关性排序，请基于这些上下文为用户提供帮助。"""
+                
                 total_time = time.time() - start_time
-                logger.info(f"[AI压缩] 本地提取完成: 提取 {len(final_lines)} 行，输出 {len(result)} 字符，耗时: {total_time:.3f}秒")
+                logger.info(f"[AI压缩] 智能降级完成：输出 {len(result)} 字符，"
+                          f"耗时 {total_time:.3f}秒")
                 return result
-            else:
-                total_time = time.time() - start_time
-                logger.info(f"[AI压缩] 无相关内容，返回基础提示，耗时: {total_time:.3f}秒")
-                return f"我可以基于您的技术背景为您提供专业建议。当前查询：{query}"
+                
+            except Exception as e:
+                logger.warning(f"[AI压缩] Reranker 处理失败：{e}，回退到简单模式")
+                # 回退到简单截取
+                return await self._simple_fallback(meaningful_chunks, query, start_time)
                 
         except Exception as e:
             total_time = time.time() - start_time
             logger.error(f"[AI压缩] 降级处理失败: {e}，耗时: {total_time:.3f}秒")
             return f"我可以帮您分析技术问题。您的查询：{query}"
+    
+    async def _simple_fallback(self, chunks: List[str], query: str, start_time: float) -> str:
+        """简单降级：基础的关键词匹配"""
+        import time
+        
+        # 简单关键词匹配
+        query_words = set(query.lower().split())
+        scored_chunks = []
+        
+        for chunk in chunks[:50]:  # 最多处理 50 个
+            chunk_lower = chunk.lower()
+            score = sum(1 for word in query_words if word in chunk_lower)
+            if score > 0:
+                scored_chunks.append((chunk, score))
+        
+        # 按分数排序
+        scored_chunks.sort(key=lambda x: x[1], reverse=True)
+        
+        # 取前 10 个
+        final_chunks = [chunk for chunk, _ in scored_chunks[:10]]
+        
+        if final_chunks:
+            result = f"""基于关键词匹配的历史记忆（共 {len(final_chunks)} 条）：
+
+{chr(10).join(f'- {chunk}' for chunk in final_chunks)}
+
+当前查询：{query}"""
+        else:
+            result = f"暂无相关历史记忆。当前查询：{query}"
+        
+        total_time = time.time() - start_time
+        logger.info(f"[AI压缩] 简单降级完成：{len(final_chunks)} 条记忆，"
+                  f"耗时 {total_time:.3f}秒")
+        return result
     
     async def _generate_contextual_prompt(self, context: str, style: str) -> str:
         """基于上下文和风格生成智能提示"""

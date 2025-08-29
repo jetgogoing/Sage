@@ -74,16 +74,16 @@ class ConfigManager:
         初始化配置管理器
         
         Args:
-            config_dir: 配置文件目录，默认为 /Users/jet/Sage/hooks/configs
+            config_dir: 配置文件目录，默认为 os.getenv('SAGE_HOME', '.')/hooks/configs
         """
         try:
             # 使用安全验证器验证配置目录路径
-            config_dir_str = config_dir or "/Users/jet/Sage/hooks/configs"
+            config_dir_str = config_dir or os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "configs")
             self.config_dir = path_validator.validate_path(config_dir_str)
             self.config_dir.mkdir(parents=True, exist_ok=True)
         except (SecurityError, AttributeError):
             # 如果验证失败或 security_utils 不可用，使用默认路径
-            self.config_dir = Path(config_dir or "/Users/jet/Sage/hooks/configs")
+            self.config_dir = Path(config_dir or os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "configs"))
             self.config_dir.mkdir(parents=True, exist_ok=True)
         
         self.config_file = self.config_dir / "sage_hooks.json"

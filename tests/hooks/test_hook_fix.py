@@ -3,6 +3,7 @@
 """
 测试 Hook 修复效果
 """
+import os
 import sys
 import json
 import subprocess
@@ -76,7 +77,7 @@ def check_log_file():
     """检查日志文件的最新条目"""
     print("\n📋 检查Hook日志...")
     
-    log_file = Path("/Users/jet/Sage/hooks/logs/archiver_enhanced.log")
+    log_file = Path(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "logs", "archiver_enhanced.log"))
     
     if not log_file.exists():
         print("❌ 日志文件不存在")

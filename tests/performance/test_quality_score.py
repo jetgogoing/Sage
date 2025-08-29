@@ -5,7 +5,7 @@
 
 import sys
 import os
-sys.path.append('/Users/jet/Sage/hooks/scripts')
+sys.path.append(os.path.join(os.getenv('SAGE_HOME', '.'), "hooks", "scripts"))
 
 from hook_data_aggregator import HookDataAggregator
 

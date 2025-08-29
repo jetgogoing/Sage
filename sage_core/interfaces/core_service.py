@@ -11,12 +11,15 @@ from datetime import datetime
 
 @dataclass
 class MemoryContent:
-    """记忆内容数据类"""
+    """记忆内容数据类 - 增强版支持Agent报告"""
     user_input: str
     assistant_response: str
     metadata: Optional[Dict[str, Any]] = None
     timestamp: Optional[datetime] = None
     session_id: Optional[str] = None
+    # 长期优化：原生支持Agent元数据
+    is_agent_report: bool = False
+    agent_metadata: Optional[Dict[str, Any]] = None  # 包含agent_name, task_id, execution_id等
 
 
 @dataclass
