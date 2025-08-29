@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  sage-db:
+    image: pgvector/pgvector:pg15
+    container_name: sage-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: sage
+      POSTGRES_PASSWORD: sage123
+      POSTGRES_DB: sage_memory
+      TZ: Asia/Shanghai
+      PGTZ: Asia/Shanghai
+    volumes:
+      - sage-db-data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sage -d sage_memory"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sage-db-data:
+    driver: local

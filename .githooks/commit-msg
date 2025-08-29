@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Git commit-msg hook to validate commit messages
+# Install: cp .githooks/commit-msg .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg
+
+commit_message_file=$1
+commit_message=$(cat $commit_message_file)
+
+# Conventional Commits pattern
+pattern="^(feat|fix|docs|style|refactor|test|chore|perf)(\([a-z]+\))?: .{1,50}"
+
+# Check if commit message matches the pattern
+if ! echo "$commit_message" | grep -qE "$pattern"; then
+    echo "❌ Commit message does not follow Conventional Commits format!"
+    echo
+    echo "Expected format: <type>(<scope>): <subject>"
+    echo
+    echo "Types: feat, fix, docs, style, refactor, test, chore, perf"
+    echo "Scope: mcp, memory, db, api, config, docker (optional)"
+    echo
+    echo "Example: feat(mcp): add auto-context injection"
+    echo
+    echo "Your message: $commit_message"
+    exit 1
+fi
+
+# Check subject line length
+subject=$(echo "$commit_message" | head -n1)
+if [ ${#subject} -gt 72 ]; then
+    echo "❌ Commit subject is too long (${#subject} > 72 characters)"
+    echo "Please keep the first line under 72 characters"
+    exit 1
+fi
+
+echo "✅ Commit message format is valid"

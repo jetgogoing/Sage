@@ -1,40 +1,162 @@
+# 数据库
+db/
+pgdata/
+postgres-data/
+*.db
+*.sqlite
+*.sqlite3
+
+# 日志
+*.log
+logs/
+
+# 临时文件
+tmp/
+temp/
+cache/
+.cache/
+
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
+*.pyc
+*.pyo
+*.pyd
 venv/
-.venv
+.venv/
+env/
+ENV/
 
 # 环境配置
 .env
 .env.local
-
-# 数据库
-pgdata/
+.env.*.local
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
-# 系统文件
+# 构建产物
+*.tar
+*.tar.gz
+dist/
+build/
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# OS
 .DS_Store
 Thumbs.db
 
-# 日志
+# 测试覆盖率
+.coverage
+htmlcov/
+.pytest_cache/
+
+# 备份文件
+*.bak
+*.backup
+*.old
+backup/
+
+# 环境配置文件
+.env
+.env.local
+# .env.example 应该被提交，作为配置模板
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 虚拟环境
+.venv/
+venv/
+ENV/
+env/
+
+# IDE配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志文件
 *.log
+logs/
 
 # 临时文件
 *.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# 测试覆盖率
+.coverage
+htmlcov/
+.tox/
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# 备份文件
+*.backup
 *.bak
-*~
 
-# Claude
-.claude/
+# 敏感测试文件和API测试
+test_*_direct.py
+test_siliconflow_api.py
+# test_*_api.py  # 允许一般测试文件
 
-# 文档和报告
-docs/
+# Sage MCP 特定忽略
+claude-wrapper.sh
+# install-*.sh  # 允许安装脚本
+*.py.backup
+recursion_lock_poc.py
+trace_imports.py
+fix_*.py
+debug_*.py
+# test_*.py  # 允许测试文件
+migrate.pyclaude-search-mcp/
+
+# 文档文件夹
+# docs/ - 精确控制忽略和保留的子目录
+docs/总结报告/
+docs/执行报告/
+docs/执行计划/
+docs/问题汇总/
+# 保留用户帮助文档：
+# docs/指南/ - 包含部署和使用指南
+# docs/项目架构说明/ - 包含架构设计和技术说明
+# tests/ - 移除忽略，允许上传测试文件
+
+# MCP 配置符号链接
+.mcp。json

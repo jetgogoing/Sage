@@ -1,0 +1,38 @@
+# <type>(<scope>): <subject>
+# 
+# <body>
+# 
+# <footer>
+# 
+# === Commit Type Guidelines ===
+# feat:     New feature
+# fix:      Bug fix
+# docs:     Documentation changes
+# style:    Code style (formatting, semicolons, etc)
+# refactor: Code refactoring
+# test:     Adding tests
+# chore:    Maintenance tasks
+# perf:     Performance improvements
+# 
+# === Scope Examples ===
+# mcp:      MCP protocol related
+# memory:   Memory system
+# db:       Database related
+# api:      API endpoints
+# config:   Configuration
+# docker:   Docker/containerization
+# 
+# === Subject Rules ===
+# - Use imperative mood ("add" not "added")
+# - Lowercase first letter
+# - No period at the end
+# - Maximum 50 characters
+# 
+# === Body Guidelines ===
+# - Explain what and why, not how
+# - Wrap at 72 characters
+# - Can use bullet points
+# 
+# === Footer ===
+# - Reference issues: "Closes #123"
+# - Breaking changes: "BREAKING CHANGE: description"
